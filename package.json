@@ -1,0 +1,17 @@
+{
+  "name": "charter",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "nodemon server.js"
+  },
+  "dependencies": {
+    "body-parser": "1.5.0",
+    "d3": "3.5.16",
+    "express": "4.13.4",
+    "jsdom": "8.1.0",
+    "lodash": "4.6.1"
+  },
+  "devDependencies": {
+    "nodemon": "1.9.1"
+  }
+}
