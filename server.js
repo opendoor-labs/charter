@@ -2,11 +2,11 @@ var _ = require('lodash');
 var bodyParser = require('body-parser');
 var d3 = require('d3');
 var express = require('express');
+var inlineCss = require('inline-css');
 var jsdom = require('jsdom');
 var Rsvg = require('librsvg').Rsvg;
 
-var content = `
-<svg id="svg">
+var html = `<svg id="svg">
   <style>
     body {
       font: 10px sans-serif;
@@ -29,8 +29,7 @@ var content = `
       stroke-width: 1.5px;
     }
   </style>
-</svg>
-`;
+</svg>`;
 
 // http://localhost:2197/chart.png?columns=2006-03-02,2006-04-02,2006-05-02,2006-06-02,2006-07-02,2006-08-02&data=295000,355900,340500,421825,450000,472500
 
@@ -42,7 +41,7 @@ app.get('/chart.png', function(request, response) {
 
   jsdom.env({
     features: { QuerySelector: true },
-    html: content,
+    html: html,
     done: function(errors, window) {
       var svg = d3.select(window.document.querySelector('#svg'));
 
@@ -99,15 +98,19 @@ app.get('/chart.png', function(request, response) {
           .attr("class", "line")
           .attr("d", line);
 
-      var svgHtml = new Buffer(svg.node().outerHTML);
-      var png = new Rsvg(svgHtml).render({
-        format: 'png',
-        width: width,
-        height: height
-      });
+      var svgHtml = svg.node().outerHTML;
+      inlineCss(svgHtml, {
+        url: 'filePath'
+      }).then(function(svgCssed) {
+        var png = new Rsvg(new Buffer(svgCssed)).render({
+          format: 'png',
+          width: width,
+          height: height
+        });
 
-      response.set('Content-Type', 'image/png');
-      response.send(png.data);
+        response.set('Content-Type', 'image/png');
+        response.send(png.data);
+      });
     }
   });
 });
