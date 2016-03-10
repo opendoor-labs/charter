@@ -34,7 +34,7 @@ var html = `<svg id="svg">
 </svg>`;
 
 // URL for testing:
-// http://localhost:2197/chart.png?width=600&height=400&columns=2006-03-02,2006-04-02,2006-05-02,2006-06-02,2006-07-02,2006-08-02&data=295000,335900,240500,421825,450000,472500|150000,230000,320000,270000,300000,350000&line_colors=2ba8de,9ba1a6&legend_labels=Your+home,Phoenix
+// http://localhost:2197/chart.png?width=600&height=400&columns=2006-03-02,2006-04-02,2006-05-02,2006-06-02,2006-07-02,2006-08-02&data=295000,335900,240500,421825,450000,472500|150000,230000,320000,270000,300000,350000&line_colors=2ba8de,9ba1a6&legend_labels=Your+Home,Phoenix
 
 var app = express();
 app.use(bodyParser.json());
@@ -158,7 +158,10 @@ app.get('/chart.png', function(request, response) {
           height: height
         });
 
-        response.set('Content-Type', 'image/png');
+        response.set({
+          'Cache-Control': 'public, max-age=86400',
+          'Content-Type': 'image/png'
+        });
         response.send(png.data);
       });
     }
