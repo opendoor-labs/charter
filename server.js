@@ -103,4 +103,4 @@ app.get('/chart', function(request, response) {
     }
   });
 });
-app.listen(2197);
+app.listen(process.env.PORT || 2197);
