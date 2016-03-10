@@ -8,36 +8,48 @@ var Rsvg = require('librsvg').Rsvg;
 
 var html = `<svg id="svg">
   <style>
-    body {
-      font: 10px sans-serif;
+    * {
+      font-weight: 300;
+      font-size: 12px;
+      font-family: 'Whitney';
     }
 
     .axis path,
     .axis line {
       fill: none;
-      stroke: #000;
+      stroke: #bdbfc1;
       shape-rendering: crispEdges;
     }
 
-    .x.axis path {
-      display: none;
+    .grid line {
+      fill: none;
+      stroke: #dedede;
+      shape-rendering: crispEdges;
     }
 
-    .line {
+    .line, .legend line {
       fill: none;
-      stroke: steelblue;
-      stroke-width: 1.5px;
     }
   </style>
 </svg>`;
 
-// http://localhost:2197/chart.png?columns=2006-03-02,2006-04-02,2006-05-02,2006-06-02,2006-07-02,2006-08-02&data=295000,355900,340500,421825,450000,472500
+// URL for testing:
+// http://localhost:2197/chart.png?width=600&height=400&columns=2006-03-02,2006-04-02,2006-05-02,2006-06-02,2006-07-02,2006-08-02&data=295000,335900,240500,421825,450000,472500|150000,230000,320000,270000,300000,350000&line_colors=2ba8de,9ba1a6&legend_labels=Your+home,Phoenix
 
 var app = express();
 app.use(bodyParser.json());
 app.get('/chart.png', function(request, response) {
-  var columns = (request.query.columns || '').split(',');
-  var data = (request.query.data || '').split(',');
+  var rawColumns = (request.query.columns || '').split(',');
+  var rawData = _.map((request.query.data || '').split('|'), (s) => s.split(','));
+  var columnFormat = d3.time.format(request.query.colum_format || '%Y-%m-%d');
+  var outputFormat = d3.time.format(request.query.output_format || '%B %Y')
+  var width = request.query.width || 800;
+  var height = request.query.height || 600;
+  var lineColors = (request.query.line_colors || '').split(',');
+  var legendLabels = _.map(_.compact((request.query.legend_labels || '').split(',')), (label) => label.replace('/\+/g', ' '));
+
+  var columns = _.map(rawColumns, (column) => columnFormat.parse(column));
+  var data = _.map(rawData, (data) => _.map(data, (d) => +d));
 
   jsdom.env({
     features: { QuerySelector: true },
@@ -45,58 +57,96 @@ app.get('/chart.png', function(request, response) {
     done: function(errors, window) {
       var svg = d3.select(window.document.querySelector('#svg'));
 
-      var margin = {top: 20, right: 20, bottom: 30, left: 50},
-          width = 960 - margin.left - margin.right,
-          height = 500 - margin.top - margin.bottom;
-
-      var formatDate = d3.time.format("%Y-%m-%d");
+      var margin = {top: 25, right: 50, bottom: 25, left: 10},
+          innerWidth = width - margin.left - margin.right,
+          innerHeight = height - margin.top - margin.bottom,
+          legendWidth = 100;
 
       var x = d3.time.scale()
-          .range([0, width]);
+          .domain(d3.extent(columns))
+          .range([0, innerWidth]);
 
       var y = d3.scale.linear()
-          .range([height, 0]);
+          .domain([0, d3.max(_.flatten(data))])
+          .range([innerHeight, 0])
+          .nice();
 
-      var xAxis = d3.svg.axis()
-          .scale(x)
-          .orient("bottom");
+      var line = d3.svg.line()
+          .interpolate('linear')
+          .defined(d => d[1])
+          .interpolate('cardinal')
+          .tension(0.8)
+          .x(function(d) { return x(d[0]); })
+          .y(function(d) { return y(d[1]); });
+
+      svg.attr('width', width)
+          .attr('height', height);
+
+      var chart = svg.append('g')
+          .attr('class', 'chart')
+          .attr('transform', `translate(${margin.left}, ${margin.top})`);
 
       var yAxis = d3.svg.axis()
           .scale(y)
-          .orient("left");
+          .orient('right')
+          .ticks(4)
+          .tickFormat(value => `$${value && (value/1000 + 'K')}`);
 
-      var line = d3.svg.line()
-          .x(function(d) { return x(formatDate.parse(d[0])); })
-          .y(function(d) { return y(d[1]); });
+      chart.append('g')
+          .attr('class', 'y axis')
+          .attr('transform', `translate(${innerWidth}, 0)`)
+          .call(yAxis);
 
-      svg.attr("width", width + margin.left + margin.right)
-          .attr("height", height + margin.top + margin.bottom);
+      var yGrid = yAxis
+          .tickSize(innerWidth, 0, 0)
+          .tickFormat('');
 
-      var g = svg.append("g")
-          .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+      chart.append('g')
+          .attr('class', 'y grid')
+          .call(yGrid);
 
-      x.domain(d3.extent(columns, function(d) { return formatDate.parse(d); }));
-      y.domain(d3.extent(data));
+      var xAxis = d3.svg.axis()
+          .scale(x)
+          .orient('bottom')
+          .ticks(5)
+          .tickFormat(outputFormat);
 
-      g.append("g")
-          .attr("class", "x axis")
-          .attr("transform", "translate(0," + height + ")")
+      chart.append('g')
+          .attr('class', 'x axis')
+          .attr('transform', `translate(0, ${innerHeight})`)
           .call(xAxis);
 
-      g.append("g")
-          .attr("class", "y axis")
-          .call(yAxis)
-        .append("text")
-          .attr("transform", "rotate(-90)")
-          .attr("y", 6)
-          .attr("dy", ".71em")
-          .style("text-anchor", "end")
-          .text("Price ($)");
+      chart.selectAll('path.line')
+          .data(data)
+          .enter()
+            .append('path')
+            .attr('class', 'line')
+            .style('stroke', (d, i) => `#${lineColors[i] || '2ba8de'}`)
+            .attr('d', (d) => line(_.zip(columns, d)));
 
-      g.append("path")
-          .datum(_.zip(columns, data))
-          .attr("class", "line")
-          .attr("d", line);
+      if (legendLabels.length) {
+        var legend = svg.append('g')
+          .attr('class', 'legend')
+          .attr('transform', `translate(${margin.left + innerWidth - legendWidth * data.length}, 10)`);
+
+        var legends = legend.selectAll('g')
+          .data(data)
+          .enter()
+            .append('g')
+              .attr('transform', (d, i) => `translate(${i * legendWidth}, 0)`);
+
+        legends
+          .append('line')
+            .attr('x2', 20)
+            .attr('y2', 0)
+            .style('stroke', (d, i) => `#${lineColors[i] || '2ba8de'}`);
+
+        legends
+          .append('text')
+          .attr('x', 23)
+          .attr('dy', '.32em')
+          .text((d, i) => legendLabels[i]);
+      }
 
       var svgHtml = svg.node().outerHTML;
       inlineCss(svgHtml, {
