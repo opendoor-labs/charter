@@ -9,16 +9,24 @@ var html = `
 <svg>
   <style>
     * {
-      font-weight: 300;
-      font-size: 12px;
-      font-family: 'Whitney';
+      font-weight: 400;
+      font-size: 13px;
+      font-family: 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;
     }
 
     .axis path,
     .axis line {
       fill: none;
-      stroke: #bdbfc1;
+      stroke: #dedede;
       shape-rendering: crispEdges;
+    }
+
+    .tick {
+      fill: #dedede;
+    }
+
+    .tick text {
+      fill: #9ba1a6;
     }
 
     .grid line {
@@ -29,6 +37,17 @@ var html = `
 
     .line, .legend line {
       fill: none;
+      stroke-width: 2px;
+    }
+
+    .legend text {
+      font-weight: 600;
+    }
+
+    .chart-border {
+      stroke: #dedede;
+      fill: #ffffff;
+      shape-rendering: crispEdges;
     }
   </style>
 </svg>
@@ -69,6 +88,7 @@ function generateChart(request, callback) {
   var rawData = _.map((request.query.data || '').split('|'), (s) => s.split(','));
   var columnFormat = d3.time.format(request.query.colum_format || '%Y-%m-%d');
   var outputFormat = d3.time.format(request.query.output_format || '%b %Y');
+  var uppercaseFormat = (d) => _.upperCase(outputFormat(d));
   var width = request.query.width || 800;
   var height = request.query.height || 600;
   var lineColors = (request.query.line_colors || '').split(',');
@@ -83,17 +103,17 @@ function generateChart(request, callback) {
     done: function(errors, window) {
       var svg = d3.select(window.document.querySelector('svg'));
 
-      var margin = {top: 25, right: 50, bottom: 25, left: 10},
+      var margin = {top: 50, right: 50, bottom: 25, left: 10},
           chartWidth = width - margin.left - margin.right,
           chartHeight = height - margin.top - margin.bottom,
-          legendWidth = 100;
+          legendWidth = 120;
 
       var x = d3.time.scale()
           .domain(d3.extent(columns))
           .range([0, chartWidth]);
 
       var y = d3.scale.linear()
-          .domain([0, d3.max(_.flatten(data))])
+          .domain(d3.extent(_.flatten(data)))
           .range([chartHeight, 0])
           .nice();
 
@@ -118,10 +138,20 @@ function generateChart(request, callback) {
           .ticks(6)
           .tickFormat(value => `$${value && (value/1000 + 'K')}`);
 
+      chart.append('rect')
+          .attr('x', 0)
+          .attr('y', 0)
+          .attr('height', chartHeight)
+          .attr('width', chartWidth)
+          .attr('class', 'chart-border');
+
       chart.append('g')
           .attr('class', 'y axis')
-          .attr('transform', `translate(${chartWidth}, 0)`)
-          .call(yAxis);
+          .attr('transform', `translate(0, 0)`)
+          .call(yAxis)
+        .selectAll('text')
+          .attr('y', -13)
+          .attr('x', 5);
 
       var yGrid = yAxis
           .tickSize(chartWidth, 0, 0)
@@ -135,7 +165,8 @@ function generateChart(request, callback) {
           .scale(x)
           .orient('bottom')
           .ticks(5)
-          .tickFormat(outputFormat);
+          .tickFormat(uppercaseFormat)
+          .outerTickSize(0);
 
       chart.append('g')
           .attr('class', 'x axis')
@@ -153,25 +184,26 @@ function generateChart(request, callback) {
       if (legendLabels.length) {
         var legend = svg.append('g')
           .attr('class', 'legend')
-          .attr('transform', `translate(${margin.left + chartWidth - legendWidth * data.length}, 10.5)`);
+          .attr('transform', `translate(${margin.left + chartWidth - legendWidth * data.length}, 23)`);
 
         var legends = legend.selectAll('g')
           .data(data)
           .enter()
             .append('g')
-              .attr('transform', (d, i) => `translate(${i * legendWidth}, 0)`);
+              .attr('transform', (d, i) => `translate(${i * legendWidth + 50}, 0)`);
 
-        legends
-          .append('line')
-            .attr('x2', 20)
-            .attr('y2', 0)
-            .style('stroke', (d, i) => `#${lineColors[i] || '2ba8de'}`);
+        legends.append('circle')
+            .attr('cx', 0)
+            .attr('cy', 0)
+            .attr('r', 5)
+            .style('fill', (d, i) => `#${lineColors[i] || '2ba8de'}`);
 
-        legends
-          .append('text')
-          .attr('x', 23)
-          .attr('dy', '.32em')
-          .text((d, i) => legendLabels[i]);
+        legends.append('text')
+            .attr('x', 10)
+            .attr('dy', '.32em')
+            .attr('class', 'legend')
+            .text((d, i) => legendLabels[i].toUpperCase())
+            .style('fill', (d, i) => `#${lineColors[i] || '2ba8de'}`);
       }
 
       callback(svg);
