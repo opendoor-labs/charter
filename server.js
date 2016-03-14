@@ -57,13 +57,17 @@ var html = `
 // http://localhost:2197/chart.png?width=600&height=400&columns=2015-03-09,2015-04-09,2015-05-09,2015-06-09,2015-07-09,2015-08-09,2015-09-09,2015-10-09,2015-11-09,2015-12-09,2016-01-09,2016-02-09,2016-03-09&data=385000,465000,438500,522500,339250,289000,384750,289625,226250,475000,348500,279900,170000|199000,207995,208000,215000,218000,215000,212500,216958,215000,215000,215000,218000,216312&line_colors=2ba8de,9ba1a6&legend_labels=Your+Home,Phoenix
 
 var app = express();
-app.get('/chart.svg', function(request, response) {
-  generateChart(request, (svg) => {
+app.get('/chart.svg', function(request, response, callback) {
+  generateChart(request, (err, svg) => {
+    if (err) return callback(err);
+
     response.send(svg.node().outerHTML);
   });
 });
-app.get('/chart.png', function(request, response) {
-  generateChart(request, (svg) => {
+app.get('/chart.png', function(request, response, callback) {
+  generateChart(request, (err, svg) => {
+    if (err) return callback(err);
+
     inlineCss(svg.node().outerHTML, {
       url: 'filePath'
     }).then(function(svgCssed) {
@@ -100,7 +104,9 @@ function generateChart(request, callback) {
   jsdom.env({
     features: { QuerySelector: true },
     html: html,
-    done: function(errors, window) {
+    done: function(err, window) {
+      if (err) return callback(err);
+
       var svg = d3.select(window.document.querySelector('svg'));
 
       var margin = {top: 50, right: 25, bottom: 25, left: 25},
@@ -209,7 +215,7 @@ function generateChart(request, callback) {
             .style('fill', (d, i) => `#${lineColors[i] || '2ba8de'}`);
       }
 
-      callback(svg);
+      callback(null, svg);
     }
   });
 }
