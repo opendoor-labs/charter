@@ -5,6 +5,7 @@ var inlineCss = require('inline-css');
 var jsdom = require('jsdom');
 var Rsvg = require('librsvg').Rsvg;
 
+var port = process.env.PORT || 2197;
 var html = `
 <svg>
   <style>
@@ -53,9 +54,6 @@ var html = `
 </svg>
 `;
 
-// URL for testing:
-// http://localhost:2197/chart.png?width=600&height=400&columns=2015-03-09,2015-04-09,2015-05-09,2015-06-09,2015-07-09,2015-08-09,2015-09-09,2015-10-09,2015-11-09,2015-12-09,2016-01-09,2016-02-09,2016-03-09&data=385000,465000,438500,522500,339250,289000,384750,289625,226250,475000,348500,279900,170000|199000,207995,208000,215000,218000,215000,212500,216958,215000,215000,215000,218000,216312&line_colors=2ba8de,9ba1a6&legend_labels=Your+Home,Phoenix
-
 var app = express();
 app.get('/chart.svg', function(request, response, callback) {
   generateChart(request, (err, svg) => {
@@ -85,7 +83,12 @@ app.get('/chart.png', function(request, response, callback) {
     });
   })
 });
-app.listen(process.env.PORT || 2197);
+app.listen(port, function() {
+  console.log(`Listening on http://0.0.0.0:${port}`);
+  if (process.env.NODE_ENV !== 'production') {
+    console.info('Try it out: \x1b[33;1mhttp://0.0.0.0:2197/chart.png?width=600&height=400&columns=2015-03-09,2015-04-09,2015-05-09,2015-06-09,2015-07-09,2015-08-09,2015-09-09,2015-10-09,2015-11-09,2015-12-09,2016-01-09,2016-02-09,2016-03-09&data=385000,465000,438500,522500,339250,289000,384750,289625,226250,475000,348500,279900,170000|199000,207995,208000,215000,218000,215000,212500,216958,215000,215000,215000,218000,216312&line_colors=2ba8de,9ba1a6&legend_labels=Your+Home,Phoenix\x1b[0m');
+  }
+});
 
 function generateChart(request, callback) {
   var rawColumns = (request.query.columns || '').split(',');
