@@ -18,5 +18,17 @@
   "engines": {
     "node": "5.7.0",
     "npm": "3.6.0"
-  }
+  },
+  "description": "Charter: A service that generates PNG from d3 charts. Useful for embedding static d3 charts in emails.",
+  "main": "server.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/opendoor-labs/charter.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/opendoor-labs/charter/issues"
+  },
+  "homepage": "https://github.com/opendoor-labs/charter#readme"
 }
