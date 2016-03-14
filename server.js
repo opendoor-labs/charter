@@ -81,6 +81,10 @@ app.get('/chart.png', function(request, response) {
     });
   })
 });
+app.use(function(err, req, res, next) {
+  console.error(err.stack);
+  res.status(500).send(err);
+});
 app.listen(process.env.PORT || 2197);
 
 function generateChart(request, callback) {
