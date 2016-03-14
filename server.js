@@ -103,7 +103,7 @@ function generateChart(request, callback) {
     done: function(errors, window) {
       var svg = d3.select(window.document.querySelector('svg'));
 
-      var margin = {top: 50, right: 50, bottom: 25, left: 10},
+      var margin = {top: 50, right: 25, bottom: 25, left: 25},
           chartWidth = width - margin.left - margin.right,
           chartHeight = height - margin.top - margin.bottom,
           legendWidth = 120;
@@ -135,7 +135,7 @@ function generateChart(request, callback) {
       var yAxis = d3.svg.axis()
           .scale(y)
           .orient('right')
-          .ticks(6)
+          .ticks(3)
           .tickFormat(value => `$${value && (value/1000 + 'K')}`);
 
       chart.append('rect')
@@ -164,7 +164,7 @@ function generateChart(request, callback) {
       var xAxis = d3.svg.axis()
           .scale(x)
           .orient('bottom')
-          .ticks(5)
+          .ticks(3)
           .tickFormat(uppercaseFormat)
           .outerTickSize(0);
 
