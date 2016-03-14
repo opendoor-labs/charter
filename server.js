@@ -135,7 +135,7 @@ function generateChart(request, callback) {
       var yAxis = d3.svg.axis()
           .scale(y)
           .orient('right')
-          .ticks(3)
+          .ticks(4)
           .tickFormat(value => `$${value && (value/1000 + 'K')}`);
 
       chart.append('rect')
