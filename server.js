@@ -55,20 +55,20 @@ var html = `
 `;
 
 var app = express();
-app.get('/chart.svg', function(request, response, callback) {
+app.get('/chart.svg', (request, response, callback) => {
   generateChart(request, (err, svg) => {
     if (err) return callback(err);
 
     response.send(svg.node().outerHTML);
   });
 });
-app.get('/chart.png', function(request, response, callback) {
+app.get('/chart.png', (request, response, callback) => {
   generateChart(request, (err, svg) => {
     if (err) return callback(err);
 
     inlineCss(svg.node().outerHTML, {
       url: 'filePath'
-    }).then(function(svgCssed) {
+    }).then((svgCssed) => {
       var png = new Rsvg(new Buffer(svgCssed)).render({
         format: 'png',
         width: svg.attr('width'),
@@ -83,14 +83,14 @@ app.get('/chart.png', function(request, response, callback) {
     });
   })
 });
-app.listen(port, function() {
+app.listen(port, () => {
   console.log(`Listening on http://0.0.0.0:${port}`);
   if (process.env.NODE_ENV !== 'production') {
     console.info('Try it out: \x1b[33;1mhttp://0.0.0.0:2197/chart.png?width=600&height=400&columns=2015-03-09,2015-04-09,2015-05-09,2015-06-09,2015-07-09,2015-08-09,2015-09-09,2015-10-09,2015-11-09,2015-12-09,2016-01-09,2016-02-09,2016-03-09&data=385000,465000,438500,522500,339250,289000,384750,289625,226250,475000,348500,279900,170000|199000,207995,208000,215000,218000,215000,212500,216958,215000,215000,215000,218000,216312&line_colors=2ba8de,9ba1a6&legend_labels=Your+Home,Phoenix\x1b[0m');
   }
 });
 
-function generateChart(request, callback) {
+var generateChart = (request, callback) => {
   var rawColumns = (request.query.columns || '').split(',');
   var rawData = _.map((request.query.data || '').split('|'), (s) => s.split(','));
   var columnFormat = d3.time.format(request.query.colum_format || '%Y-%m-%d');
@@ -107,7 +107,7 @@ function generateChart(request, callback) {
   jsdom.env({
     features: { QuerySelector: true },
     html: html,
-    done: function(err, window) {
+    done: (err, window) => {
       if (err) return callback(err);
 
       var svg = d3.select(window.document.querySelector('svg'));
@@ -134,8 +134,8 @@ function generateChart(request, callback) {
           .defined(d => d[1])
           .interpolate('cardinal')
           .tension(0.8)
-          .x(function(d) { return x(d[0]); })
-          .y(function(d) { return y(d[1]); });
+          .x(d => x(d[0]))
+          .y(d => y(d[1]));
 
       svg.attr('width', width)
           .attr('height', height);
