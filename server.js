@@ -112,8 +112,11 @@ function generateChart(request, callback) {
           .domain(d3.extent(columns))
           .range([0, chartWidth]);
 
+      var extent = d3.extent(_.flatten(data));
+      var buffer = extent[0] * 0.25;
+
       var y = d3.scale.linear()
-          .domain(d3.extent(_.flatten(data)))
+          .domain([extent[0] - buffer, extent[1] + buffer])
           .range([chartHeight, 0])
           .nice();
 
