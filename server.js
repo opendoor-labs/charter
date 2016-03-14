@@ -55,6 +55,7 @@ var html = `
 `;
 
 var app = express();
+
 app.get('/chart.svg', (request, response, callback) => {
   generateChart(request, (err, svg) => {
     if (err) return callback(err);
@@ -62,6 +63,7 @@ app.get('/chart.svg', (request, response, callback) => {
     response.send(svg.node().outerHTML);
   });
 });
+
 app.get('/chart.png', (request, response, callback) => {
   generateChart(request, (err, svg) => {
     if (err) return callback(err);
@@ -83,6 +85,7 @@ app.get('/chart.png', (request, response, callback) => {
     });
   })
 });
+
 app.listen(port, () => {
   console.log(`Listening on http://0.0.0.0:${port}`);
   if (process.env.NODE_ENV !== 'production') {
