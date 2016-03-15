@@ -11,7 +11,7 @@ var html = `
   <style>
     * {
       font-weight: 400;
-      font-size: 13px;
+      font-size: 26px;
       font-family: 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;
     }
 
@@ -26,6 +26,10 @@ var html = `
       fill: #dedede;
     }
 
+    .tick line {
+      stroke-width: 2px;
+    }
+
     .tick text {
       fill: #9ba1a6;
     }
@@ -33,11 +37,16 @@ var html = `
     .grid line {
       fill: none;
       stroke: #dedede;
+      stroke-width: 2px;
       shape-rendering: crispEdges;
     }
 
     .line, .legend line {
       fill: none;
+      stroke-width: 4px;
+    }
+
+    .chart-border {
       stroke-width: 2px;
     }
 
@@ -115,10 +124,10 @@ var generateChart = (request, callback) => {
 
       var svg = d3.select(window.document.querySelector('svg'));
 
-      var margin = {top: 50, right: 25, bottom: 25, left: 25},
+      var margin = {top: 100, right: 50, bottom: 50, left: 50},
           chartWidth = width - margin.left - margin.right,
           chartHeight = height - margin.top - margin.bottom,
-          legendWidth = 120;
+          legendWidth = 240;
 
       var x = d3.time.scale()
           .domain(d3.extent(columns))
@@ -165,8 +174,8 @@ var generateChart = (request, callback) => {
           .attr('transform', `translate(0, 0)`)
           .call(yAxis)
         .selectAll('text')
-          .attr('y', -13)
-          .attr('x', 5);
+          .attr('y', -26)
+          .attr('x', 10);
 
       var yGrid = yAxis
           .tickSize(chartWidth, 0, 0)
@@ -181,12 +190,15 @@ var generateChart = (request, callback) => {
           .orient('bottom')
           .ticks(3)
           .tickFormat(uppercaseFormat)
+          .innerTickSize(20)
           .outerTickSize(0);
 
       chart.append('g')
           .attr('class', 'x axis')
           .attr('transform', `translate(0, ${chartHeight})`)
-          .call(xAxis);
+          .call(xAxis)
+        .selectAll('text')
+          .attr('y', 30);
 
       chart.selectAll('path.line')
           .data(data)
@@ -199,7 +211,7 @@ var generateChart = (request, callback) => {
       if (legendLabels.length) {
         var legend = svg.append('g')
           .attr('class', 'legend')
-          .attr('transform', `translate(${margin.left + chartWidth - legendWidth * data.length - 10}, 23)`);
+          .attr('transform', `translate(${margin.left + chartWidth - legendWidth * data.length - 5}, 46)`);
 
         var legends = legend.selectAll('g')
           .data(data)
@@ -210,11 +222,11 @@ var generateChart = (request, callback) => {
         legends.append('circle')
             .attr('cx', 0)
             .attr('cy', 0)
-            .attr('r', 5)
+            .attr('r', 10)
             .style('fill', (d, i) => `#${lineColors[i] || '2ba8de'}`);
 
         legends.append('text')
-            .attr('x', 10)
+            .attr('x', 20)
             .attr('dy', '.32em')
             .attr('class', 'legend')
             .text((d, i) => legendLabels[i].toUpperCase())
