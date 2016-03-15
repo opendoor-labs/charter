@@ -211,7 +211,7 @@ var generateChart = (request, callback) => {
       if (legendLabels.length) {
         var legend = svg.append('g')
           .attr('class', 'legend')
-          .attr('transform', `translate(${margin.left + chartWidth - legendWidth * data.length - 5}, 46)`);
+          .attr('transform', `translate(${margin.left + chartWidth - legendWidth * data.length + 25}, 46)`);
 
         var legends = legend.selectAll('g')
           .data(data)
