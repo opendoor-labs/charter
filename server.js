@@ -124,7 +124,7 @@ var generateChart = (request, callback) => {
 
       var svg = d3.select(window.document.querySelector('svg'));
 
-      var margin = {top: 100, right: 50, bottom: 50, left: 50},
+      var margin = {top: 100, right: 50, bottom: 60, left: 50},
           chartWidth = width - margin.left - margin.right,
           chartHeight = height - margin.top - margin.bottom,
           legendWidth = 240;
