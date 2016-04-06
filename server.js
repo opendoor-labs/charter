@@ -3,6 +3,7 @@ var d3 = require('d3');
 var express = require('express');
 var inlineCss = require('inline-css');
 var jsdom = require('jsdom');
+var moment = require('moment');
 var Rsvg = require('librsvg').Rsvg;
 
 var port = process.env.PORT || 2197;
@@ -108,7 +109,7 @@ app.get('/chart.png', (request, response, callback) => {
 app.listen(port, () => {
   console.log(`Listening on http://0.0.0.0:${port}`);
   if (process.env.NODE_ENV !== 'production') {
-    console.info('Try it out: \x1b[33;1mhttp://0.0.0.0:2197/chart.png?width=600&height=400&columns=2015-03-09,2015-04-09,2015-05-09,2015-06-09,2015-07-09,2015-08-09,2015-09-09,2015-10-09,2015-11-09,2015-12-09,2016-01-09,2016-02-09,2016-03-09&data=385000,465000,438500,522500,339250,289000,384750,289625,226250,475000,348500,279900,170000|199000,207995,208000,215000,218000,215000,212500,216958,215000,215000,215000,218000,216312&line_colors=2ba8de,9ba1a6&legend_labels=Your+Home,Phoenix\x1b[0m');
+    console.info('Try it out: \x1b[33;1mhttp://0.0.0.0:2197/chart.png?width=750&height=600&columns=2015-05-09,2015-06-09,2015-07-09,2015-08-09,2015-09-09,2015-10-09,2015-11-09,2015-12-09,2016-01-09,2016-02-09,2016-03-09&data=438500,522500,339250,289000,384750,289625,226250,475000,348500,279900,170000|208000,215000,218000,215000,212500,216958,215000,215000,215000,218000,216312&line_colors=2ba8de,9ba1a6&legend_labels=Your+Home,Phoenix\x1b[0m');
   }
 });
 
@@ -116,14 +117,14 @@ var generateChart = (request, callback) => {
   var rawColumns = (request.query.columns || '').split(',');
   var rawData = _.map((request.query.data || '').split('|'), (s) => s.split(','));
   var columnFormat = d3.time.format(request.query.colum_format || '%Y-%m-%d');
-  var outputFormat = d3.time.format(request.query.output_format || '%_m/%y');
+  var outputFormat = d3.time.format(request.query.output_format || '%b');
   var width = request.query.width || 800;
   var height = request.query.height || 600;
   var lineColors = (request.query.line_colors || '').split(',');
   var legendLabels = (_.compact((request.query.legend_labels || '').split(',')));
 
   var columns = _.map(rawColumns, (column) => columnFormat.parse(column));
-  var columnIndicies = _.filter(_.range(columns.length), (i) => i % 3 === 0);
+  var columnIndicies = _.filter(_.range(columns.length), (i) => i % 2 === 0);
   var data = _.map(rawData, (data) => _.map(data, (d) => +d));
 
   jsdom.env({
@@ -134,20 +135,16 @@ var generateChart = (request, callback) => {
 
       var svg = d3.select(window.document.querySelector('svg'));
 
-      var margin = {top: 75, right: 20, bottom: 75, left: 20},
+      var margin = {top: 20, right: 20, bottom: 75, left: 20},
           chartWidth = width - margin.left - margin.right,
           chartHeight = height - margin.top - margin.bottom,
           legendWidth = 240;
 
-      // Add 10 days to both sides to give us a little space
       var xExtent = d3.extent(columns);
-      var xStart = new Date(xExtent[0]);
-      xStart.setDate(xExtent[0].getDate() - 10);
-      var xEnd = new Date(xExtent[1]);
-      xEnd.setDate(xExtent[1].getDate() + 10);
 
       var x = d3.time.scale()
-          .domain([xStart, xEnd])
+          .domain([moment(xExtent[0]).subtract(10, 'days').toDate(),
+                   moment(xExtent[1]).add(10, 'days').toDate()])
           .range([0, chartWidth]);
 
       var yExtent = d3.extent(_.flatten(data));
@@ -155,7 +152,7 @@ var generateChart = (request, callback) => {
 
       var y = d3.scale.linear()
           .domain([yExtent[0] - buffer, yExtent[1] + buffer])
-          .range([chartHeight, 0])
+          .range([chartHeight, 60])
           .nice();
 
       var line = d3.svg.line()
@@ -188,14 +185,13 @@ var generateChart = (request, callback) => {
 
       chart.append('rect')
           .attr('x', 0)
-          .attr('y', -60)
-          .attr('height', chartHeight + 60)
+          .attr('y', 0)
+          .attr('height', chartHeight)
           .attr('width', chartWidth)
           .attr('class', 'chart-border');
 
       chart.append('g')
           .attr('class', 'y axis')
-          .attr('transform', `translate(0, 0)`)
           .call(yAxis)
         .selectAll('text')
           .attr('y', -26)
@@ -213,7 +209,7 @@ var generateChart = (request, callback) => {
           .scale(x)
           .orient('bottom')
           .tickValues(_.map(columnIndicies, (i) => columns[i]))
-          .tickFormat(outputFormat)
+          .tickFormat(d => outputFormat(d).toUpperCase())
           .innerTickSize(20)
           .outerTickSize(0);
 
@@ -236,7 +232,7 @@ var generateChart = (request, callback) => {
       if (legendLabels.length) {
         var legend = svg.append('g')
           .attr('class', 'legend')
-          .attr('transform', `translate(${margin.left + chartWidth - legendWidth * data.length + 25}, 46)`);
+          .attr('transform', `translate(${margin.left + chartWidth - legendWidth * data.length + 25}, 55)`);
 
         var legends = legend.selectAll('g')
           .data(data)
