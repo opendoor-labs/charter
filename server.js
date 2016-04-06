@@ -22,6 +22,11 @@ var html = `
       shape-rendering: crispEdges;
     }
 
+    .axis text.dark {
+      stroke: #000000;
+      fill: #000000;
+    }
+
     .tick {
       fill: #dedede;
     }
@@ -46,18 +51,23 @@ var html = `
       stroke-width: 4px;
     }
 
-    .chart-border {
-      stroke-width: 2px;
-    }
-
     .legend text {
       font-weight: 600;
+      font-size: 24px;
+    }
+
+    .chart-border, .outer-border {
+      stroke-width: 2px;
+      stroke: #dedede;
+      shape-rendering: crispEdges;
     }
 
     .chart-border {
-      stroke: #dedede;
       fill: #ffffff;
-      shape-rendering: crispEdges;
+    }
+
+    .outer-border {
+      fill: none;
     }
   </style>
 </svg>
@@ -106,14 +116,14 @@ var generateChart = (request, callback) => {
   var rawColumns = (request.query.columns || '').split(',');
   var rawData = _.map((request.query.data || '').split('|'), (s) => s.split(','));
   var columnFormat = d3.time.format(request.query.colum_format || '%Y-%m-%d');
-  var outputFormat = d3.time.format(request.query.output_format || '%b %Y');
-  var uppercaseFormat = (d) => _.upperCase(outputFormat(d));
+  var outputFormat = d3.time.format(request.query.output_format || '%_m/%y');
   var width = request.query.width || 800;
   var height = request.query.height || 600;
   var lineColors = (request.query.line_colors || '').split(',');
   var legendLabels = (_.compact((request.query.legend_labels || '').split(',')));
 
   var columns = _.map(rawColumns, (column) => columnFormat.parse(column));
+  var columnIndicies = _.filter(_.range(columns.length), (i) => i % 3 === 0);
   var data = _.map(rawData, (data) => _.map(data, (d) => +d));
 
   jsdom.env({
@@ -124,20 +134,27 @@ var generateChart = (request, callback) => {
 
       var svg = d3.select(window.document.querySelector('svg'));
 
-      var margin = {top: 100, right: 50, bottom: 60, left: 50},
+      var margin = {top: 75, right: 20, bottom: 75, left: 20},
           chartWidth = width - margin.left - margin.right,
           chartHeight = height - margin.top - margin.bottom,
           legendWidth = 240;
 
+      // Add 10 days to both sides to give us a little space
+      var xExtent = d3.extent(columns);
+      var xStart = new Date(xExtent[0]);
+      xStart.setDate(xExtent[0].getDate() - 10);
+      var xEnd = new Date(xExtent[1]);
+      xEnd.setDate(xExtent[1].getDate() + 10);
+
       var x = d3.time.scale()
-          .domain(d3.extent(columns))
+          .domain([xStart, xEnd])
           .range([0, chartWidth]);
 
-      var extent = d3.extent(_.flatten(data));
-      var buffer = extent[0] * 0.25;
+      var yExtent = d3.extent(_.flatten(data));
+      var buffer = yExtent[0] * 0.25;
 
       var y = d3.scale.linear()
-          .domain([extent[0] - buffer, extent[1] + buffer])
+          .domain([yExtent[0] - buffer, yExtent[1] + buffer])
           .range([chartHeight, 0])
           .nice();
 
@@ -152,6 +169,13 @@ var generateChart = (request, callback) => {
       svg.attr('width', width)
           .attr('height', height);
 
+      svg.append('rect')
+          .attr('x', 1)
+          .attr('y', 1)
+          .attr('height', height - 2)
+          .attr('width', width - 2)
+          .attr('class', 'outer-border');
+
       var chart = svg.append('g')
           .attr('class', 'chart')
           .attr('transform', `translate(${margin.left}, ${margin.top})`);
@@ -164,8 +188,8 @@ var generateChart = (request, callback) => {
 
       chart.append('rect')
           .attr('x', 0)
-          .attr('y', 0)
-          .attr('height', chartHeight)
+          .attr('y', -60)
+          .attr('height', chartHeight + 60)
           .attr('width', chartWidth)
           .attr('class', 'chart-border');
 
@@ -188,8 +212,8 @@ var generateChart = (request, callback) => {
       var xAxis = d3.svg.axis()
           .scale(x)
           .orient('bottom')
-          .ticks(3)
-          .tickFormat(uppercaseFormat)
+          .tickValues(_.map(columnIndicies, (i) => columns[i]))
+          .tickFormat(outputFormat)
           .innerTickSize(20)
           .outerTickSize(0);
 
@@ -198,7 +222,8 @@ var generateChart = (request, callback) => {
           .attr('transform', `translate(0, ${chartHeight})`)
           .call(xAxis)
         .selectAll('text')
-          .attr('y', 30);
+          .attr('y', 30)
+          .attr('class', (_, i) => i === columnIndicies.length - 1 ? 'dark' : '');
 
       chart.selectAll('path.line')
           .data(data)
