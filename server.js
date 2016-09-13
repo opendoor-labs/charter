@@ -137,7 +137,7 @@ var generateChart = (request, callback) => {
 var renderChart = (request, window, callback) => {
   var rawColumns = (request.query.columns || '').split(',');
   var rawData = _.map((request.query.data || '').split('|'), (s) => s.split(','));
-  var columnFormat = d3.time.format(request.query.colum_format || '%Y-%m-%d');
+  var columnFormat = d3.time.format(request.query.column_format || '%Y-%m-%d');
   var outputFormat = d3.time.format(request.query.output_format || '%b');
   var width = request.query.width || 800;
   var height = request.query.height || 600;
