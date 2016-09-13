@@ -229,13 +229,14 @@ var renderChart = (request, window, callback) => {
     .innerTickSize(20)
     .outerTickSize(0);
 
-  chart.append('g')
+  var xTicks = chart.append('g')
     .attr('class', 'x axis')
     .attr('transform', `translate(0, ${chartHeight})`)
     .call(xAxis)
     .selectAll('text')
-    .attr('y', 30)
-    .attr('class', (_, i) => i === columnIndicies.length - 1 ? 'dark' : '');
+    .attr('y', 30);
+
+  d3.select(xTicks[0][xTicks.size() - 1]).attr('class', 'dark');
 
   chart.selectAll('path.line')
     .data(data)
