@@ -114,6 +114,22 @@ app.listen(port, () => {
 });
 
 var generateChart = (request, callback) => {
+  jsdom.env({
+    features: { QuerySelector: true },
+    html: html,
+    done: (err, window) => {
+      if (err) return callback(err);
+
+      try {
+        renderChart(request, window, callback);
+      } catch(err) {
+        callback(err);
+      }
+    }
+  });
+};
+
+var renderChart = (request, window, callback) => {
   var rawColumns = (request.query.columns || '').split(',');
   var rawData = _.map((request.query.data || '').split('|'), (s) => s.split(','));
   var columnFormat = d3.time.format(request.query.colum_format || '%Y-%m-%d');
@@ -127,134 +143,126 @@ var generateChart = (request, callback) => {
   var columnIndicies = _.filter(_.range(columns.length), (i) => i % 2 === 0);
   var data = _.map(rawData, (data) => _.map(data, (d) => +d));
 
-  jsdom.env({
-    features: { QuerySelector: true },
-    html: html,
-    done: (err, window) => {
-      if (err) return callback(err);
+  var svg = d3.select(window.document.querySelector('svg'));
 
-      var svg = d3.select(window.document.querySelector('svg'));
+  var margin = {top: 20, right: 20, bottom: 75, left: 20},
+  chartWidth = width - margin.left - margin.right,
+  chartHeight = height - margin.top - margin.bottom,
+  legendWidth = 240;
 
-      var margin = {top: 20, right: 20, bottom: 75, left: 20},
-          chartWidth = width - margin.left - margin.right,
-          chartHeight = height - margin.top - margin.bottom,
-          legendWidth = 240;
+  var xExtent = d3.extent(columns);
 
-      var xExtent = d3.extent(columns);
+  var x = d3.time.scale()
+    .domain([moment(xExtent[0]).subtract(10, 'days').toDate(),
+        moment(xExtent[1]).add(10, 'days').toDate()])
+    .range([0, chartWidth]);
 
-      var x = d3.time.scale()
-          .domain([moment(xExtent[0]).subtract(10, 'days').toDate(),
-                   moment(xExtent[1]).add(10, 'days').toDate()])
-          .range([0, chartWidth]);
+  var yExtent = d3.extent(_.flatten(data));
+  var buffer = yExtent[0] * 0.25;
 
-      var yExtent = d3.extent(_.flatten(data));
-      var buffer = yExtent[0] * 0.25;
+  var y = d3.scale.linear()
+    .domain([yExtent[0] - buffer, yExtent[1] + buffer])
+    .range([chartHeight, 60])
+    .nice();
 
-      var y = d3.scale.linear()
-          .domain([yExtent[0] - buffer, yExtent[1] + buffer])
-          .range([chartHeight, 60])
-          .nice();
+  var line = d3.svg.line()
+    .interpolate('linear')
+    .defined(d => d[1])
+    .interpolate('cardinal')
+    .tension(0.8)
+    .x(d => x(d[0]))
+    .y(d => y(d[1]));
 
-      var line = d3.svg.line()
-          .interpolate('linear')
-          .defined(d => d[1])
-          .interpolate('cardinal')
-          .tension(0.8)
-          .x(d => x(d[0]))
-          .y(d => y(d[1]));
+  svg.attr('width', width)
+    .attr('height', height);
 
-      svg.attr('width', width)
-          .attr('height', height);
+  svg.append('rect')
+    .attr('x', 1)
+    .attr('y', 1)
+    .attr('height', height - 2)
+    .attr('width', width - 2)
+    .attr('class', 'outer-border');
 
-      svg.append('rect')
-          .attr('x', 1)
-          .attr('y', 1)
-          .attr('height', height - 2)
-          .attr('width', width - 2)
-          .attr('class', 'outer-border');
+  var chart = svg.append('g')
+    .attr('class', 'chart')
+    .attr('transform', `translate(${margin.left}, ${margin.top})`);
 
-      var chart = svg.append('g')
-          .attr('class', 'chart')
-          .attr('transform', `translate(${margin.left}, ${margin.top})`);
+  var yAxis = d3.svg.axis()
+    .scale(y)
+    .orient('right')
+    .ticks(4)
+    .tickFormat(value => `$${value && (value/1000 + 'K')}`);
 
-      var yAxis = d3.svg.axis()
-          .scale(y)
-          .orient('right')
-          .ticks(4)
-          .tickFormat(value => `$${value && (value/1000 + 'K')}`);
+  chart.append('rect')
+    .attr('x', 0)
+    .attr('y', 0)
+    .attr('height', chartHeight)
+    .attr('width', chartWidth)
+    .attr('class', 'chart-border');
 
-      chart.append('rect')
-          .attr('x', 0)
-          .attr('y', 0)
-          .attr('height', chartHeight)
-          .attr('width', chartWidth)
-          .attr('class', 'chart-border');
+  chart.append('g')
+    .attr('class', 'y axis')
+    .call(yAxis)
+    .selectAll('text')
+    .attr('y', -26)
+    .attr('x', 10);
 
-      chart.append('g')
-          .attr('class', 'y axis')
-          .call(yAxis)
-        .selectAll('text')
-          .attr('y', -26)
-          .attr('x', 10);
+  var yGrid = yAxis
+    .tickSize(chartWidth, 0, 0)
+    .tickFormat('');
 
-      var yGrid = yAxis
-          .tickSize(chartWidth, 0, 0)
-          .tickFormat('');
+  chart.append('g')
+    .attr('class', 'y grid')
+    .call(yGrid);
 
-      chart.append('g')
-          .attr('class', 'y grid')
-          .call(yGrid);
+  var xAxis = d3.svg.axis()
+    .scale(x)
+    .orient('bottom')
+    .tickValues(_.map(columnIndicies, (i) => columns[i]))
+    .tickFormat(d => outputFormat(d).toUpperCase())
+    .innerTickSize(20)
+    .outerTickSize(0);
 
-      var xAxis = d3.svg.axis()
-          .scale(x)
-          .orient('bottom')
-          .tickValues(_.map(columnIndicies, (i) => columns[i]))
-          .tickFormat(d => outputFormat(d).toUpperCase())
-          .innerTickSize(20)
-          .outerTickSize(0);
+  chart.append('g')
+    .attr('class', 'x axis')
+    .attr('transform', `translate(0, ${chartHeight})`)
+    .call(xAxis)
+    .selectAll('text')
+    .attr('y', 30)
+    .attr('class', (_, i) => i === columnIndicies.length - 1 ? 'dark' : '');
 
-      chart.append('g')
-          .attr('class', 'x axis')
-          .attr('transform', `translate(0, ${chartHeight})`)
-          .call(xAxis)
-        .selectAll('text')
-          .attr('y', 30)
-          .attr('class', (_, i) => i === columnIndicies.length - 1 ? 'dark' : '');
+  chart.selectAll('path.line')
+    .data(data)
+    .enter()
+    .append('path')
+    .attr('class', 'line')
+    .style('stroke', (d, i) => `#${lineColors[i] || '2ba8de'}`)
+    .attr('d', (d) => line(_.zip(columns, d)));
 
-      chart.selectAll('path.line')
-          .data(data)
-          .enter()
-            .append('path')
-            .attr('class', 'line')
-            .style('stroke', (d, i) => `#${lineColors[i] || '2ba8de'}`)
-            .attr('d', (d) => line(_.zip(columns, d)));
+  if (legendLabels.length) {
+    var legend = svg.append('g')
+      .attr('class', 'legend')
+      .attr('transform', `translate(${margin.left + chartWidth - legendWidth * data.length + 25}, 55)`);
 
-      if (legendLabels.length) {
-        var legend = svg.append('g')
-          .attr('class', 'legend')
-          .attr('transform', `translate(${margin.left + chartWidth - legendWidth * data.length + 25}, 55)`);
+    var legends = legend.selectAll('g')
+      .data(data)
+      .enter()
+      .append('g')
+      .attr('transform', (d, i) => `translate(${i * legendWidth + 50}, 0)`);
 
-        var legends = legend.selectAll('g')
-          .data(data)
-          .enter()
-            .append('g')
-              .attr('transform', (d, i) => `translate(${i * legendWidth + 50}, 0)`);
+    legends.append('circle')
+      .attr('cx', 0)
+      .attr('cy', 0)
+      .attr('r', 10)
+      .style('fill', (d, i) => `#${lineColors[i] || '2ba8de'}`);
 
-        legends.append('circle')
-            .attr('cx', 0)
-            .attr('cy', 0)
-            .attr('r', 10)
-            .style('fill', (d, i) => `#${lineColors[i] || '2ba8de'}`);
+    legends.append('text')
+      .attr('x', 20)
+      .attr('dy', '.32em')
+      .attr('class', 'legend')
+      .text((d, i) => legendLabels[i].toUpperCase())
+      .style('fill', (d, i) => `#${lineColors[i] || '2ba8de'}`);
+  }
 
-        legends.append('text')
-            .attr('x', 20)
-            .attr('dy', '.32em')
-            .attr('class', 'legend')
-            .text((d, i) => legendLabels[i].toUpperCase())
-            .style('fill', (d, i) => `#${lineColors[i] || '2ba8de'}`);
-      }
-
-      callback(null, svg);
-    }
-  });
-}
+  callback(null, svg);
+};
