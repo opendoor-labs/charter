@@ -74,6 +74,11 @@ var html = `
 </svg>
 `;
 
+var tickFormats = {
+  number: value => value.toString(),
+  currencyK: value => `$${value && (value/1000 + 'K')}`,
+};
+
 var app = express();
 
 app.get('/chart.svg', (request, response, callback) => {
@@ -138,6 +143,7 @@ var renderChart = (request, window, callback) => {
   var height = request.query.height || 600;
   var lineColors = (request.query.line_colors || '').split(',');
   var legendLabels = (_.compact((request.query.legend_labels || '').split(',')));
+  var yTickFormatter = tickFormats[request.query.format || 'currencyK'];
 
   var columns = _.map(rawColumns, (column) => columnFormat.parse(column));
   var columnIndicies = _.filter(_.range(columns.length), (i) => i % 2 === 0);
@@ -191,7 +197,7 @@ var renderChart = (request, window, callback) => {
     .scale(y)
     .orient('right')
     .ticks(4)
-    .tickFormat(value => `$${value && (value/1000 + 'K')}`);
+    .tickFormat(yTickFormatter);
 
   chart.append('rect')
     .attr('x', 0)
