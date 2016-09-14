@@ -79,6 +79,16 @@ var tickFormats = {
   currencyK: value => `$${value && (value/1000 + 'K')}`,
 };
 
+var tickStrategies = {
+  period: (columns) => (axis) => {
+    var columnindicies = _.filter(_.range(columns.length), (i) => i % 2 === 0);
+    axis.tickValues(_.map(columnindicies, (i) => columns[i]));
+  },
+  constant: () => (axis) => {
+    axis.ticks(5);
+  }
+};
+
 var app = express();
 
 app.get('/chart.svg', (request, response, callback) => {
@@ -146,7 +156,7 @@ var renderChart = (request, window, callback) => {
   var yTickFormatter = tickFormats[request.query.format || 'currencyK'];
 
   var columns = _.map(rawColumns, (column) => columnFormat.parse(column));
-  var columnIndicies = _.filter(_.range(columns.length), (i) => i % 2 === 0);
+  var applyXTickStrategy = tickStrategies[request.query.tick_strategy || 'period'](columns);
   var data = _.map(rawData, (data) => _.map(data, (d) => +d));
 
   var svg = d3.select(window.document.querySelector('svg'));
@@ -224,10 +234,11 @@ var renderChart = (request, window, callback) => {
   var xAxis = d3.svg.axis()
     .scale(x)
     .orient('bottom')
-    .tickValues(_.map(columnIndicies, (i) => columns[i]))
     .tickFormat(d => outputFormat(d).toUpperCase())
     .innerTickSize(20)
     .outerTickSize(0);
+
+  applyXTickStrategy(xAxis);
 
   var xTicks = chart.append('g')
     .attr('class', 'x axis')
