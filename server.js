@@ -52,6 +52,10 @@ var html = `
       stroke-width: 4px;
     }
 
+    .circles-1 circle {
+      fill: transparent !important;
+    }
+
     .legend text {
       font-weight: 600;
       font-size: 24px;
@@ -251,11 +255,22 @@ var renderChart = (request, window, callback) => {
 
   chart.selectAll('path.line')
     .data(data)
-    .enter()
-    .append('path')
-    .attr('class', 'line')
-    .style('stroke', (d, i) => `#${lineColors[i] || '2ba8de'}`)
-    .attr('d', (d) => line(_.zip(columns, d)));
+    .enter().append('path')
+      .attr('class', 'line')
+      .style('stroke', (d, i) => `#${lineColors[i] || '2ba8de'}`)
+      .attr('d', (d) => line(_.zip(columns, d)));
+
+  chart.selectAll('g.circles')
+    .data(data)
+    .enter().append('g')
+      .attr('class', (d, i) => `circles circles-${i}`)
+      .selectAll('circle')
+        .data(d => d)
+        .enter().append('circle')
+          .attr('r', 5)
+          .style('fill', (d, i, j) => `#${lineColors[j] || '2ba8de'}`)
+          .attr('cx', (d, i) => x(columns[i]))
+          .attr('cy', d => y(d))
 
   if (legendLabels.length) {
     var legend = svg.append('g')
