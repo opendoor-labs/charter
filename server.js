@@ -174,9 +174,6 @@ var renderChart = (request, window, callback) => {
   var applyXTickStrategy = tickStrategies[request.query.tick_strategy || 'period'](columns);
   var data = _.map(rawData, (data) => _.map(data, (d) => +d)).reverse();
 
-  console.log('data:' + data);
-  console.log('columns:' + columns);
-
   var svg = d3.select(window.document.querySelector('svg'));
 
   var margin = {top: 20, right: 20, bottom: 50, left: 20},
