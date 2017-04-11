@@ -139,7 +139,7 @@ app.get('/chart.png', (request, response, callback) => {
 app.listen(port, () => {
   console.log(`Listening on http://0.0.0.0:${port}`);
   if (process.env.NODE_ENV !== 'production') {
-    console.info('Try it out: \x1b[33;1mhttp://0.0.0.0:2197/chart.png?width=750&height=600&columns=2015-05-09,2015-06-09,2015-07-09,2015-08-09,2015-09-09,2015-10-09,2015-11-09,2015-12-09,2016-01-09,2016-02-09,2016-03-09&data=438500,522500,339250,289000,384750,289625,226250,475000,348500,279900,170000|208000,215000,218000,215000,212500,216958,215000,215000,215000,218000,216312&line_colors=1C85E8,D0D3E0&legend_labels=Your+Home,Phoenix\x1b[0m');
+    console.info('Try it out: \x1b[33;1mhttp://0.0.0.0:2197/chart.png?width=750&height=600&columns=2015-05-09,2015-06-09,2015-07-09,2015-08-09,2015-09-09,2015-10-09,2015-11-09,2015-12-09,2016-01-09,2016-02-09,2016-03-09&data=208000,215000,218000,215000,212500,216958,215000,215000,215000,218000,216312|438500,522500,339250,289000,384750,289625,226250,475000,348500,279900,170000&line_colors=D0D3E0,1C85E8&legend_labels=Phoenix,Your+Home\x1b[0m');
   }
 });
 
@@ -166,13 +166,13 @@ var renderChart = (request, window, callback) => {
   var outputFormat = d3.time.format(request.query.output_format || '%b');
   var width = request.query.width || 800;
   var height = request.query.height || 600;
-  var lineColors = (request.query.line_colors || '').split(',').reverse();
+  var lineColors = (request.query.line_colors || '').split(',');
   var legendLabels = (_.compact((request.query.legend_labels || '').split(',')));
   var yTickFormatter = tickFormats[request.query.format || 'currencyK'];
 
   var columns = _.map(rawColumns, (column) => columnFormat.parse(column));
   var applyXTickStrategy = tickStrategies[request.query.tick_strategy || 'period'](columns);
-  var data = _.map(rawData, (data) => _.map(data, (d) => +d)).reverse();
+  var data = _.map(rawData, (data) => _.map(data, (d) => +d));
 
   var svg = d3.select(window.document.querySelector('svg'));
 
