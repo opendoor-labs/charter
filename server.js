@@ -19,13 +19,13 @@ var html = `
     .axis path,
     .axis line {
       fill: none;
-      stroke: #dedede;
+      stroke: #f0f0f0;
       shape-rendering: crispEdges;
     }
 
     .axis text.dark {
-      stroke: #000000;
-      fill: #000000;
+      stroke: #0F1C47;
+      fill: #0F1C47;
     }
 
     .tick {
@@ -38,12 +38,13 @@ var html = `
 
     .tick text {
       fill: #9ba1a6;
+      font-size: 14px;
     }
 
     .grid line {
       fill: none;
-      stroke: #dedede;
-      stroke-width: 2px;
+      stroke: #f0f0f0;
+      stroke-width: 1px;
       shape-rendering: crispEdges;
     }
 
@@ -54,13 +55,27 @@ var html = `
 
     .legend text {
       font-weight: 600;
-      font-size: 24px;
+      font-size: 16px;
     }
 
     .chart-border, .outer-border {
-      stroke-width: 2px;
+      stroke-width: 0;
       stroke: #dedede;
       shape-rendering: crispEdges;
+    }
+
+    .circles {
+      stroke-width: 3px;
+    }
+
+    .circles-0 circle {
+      fill: #D0D3E0 !important;
+      stroke: #ffffff !important;
+    }
+
+    .circles-1 circle {
+      fill: #ffffff !important;
+      stroke: #1C85E8 !important;
     }
 
     .chart-border {
@@ -124,7 +139,7 @@ app.get('/chart.png', (request, response, callback) => {
 app.listen(port, () => {
   console.log(`Listening on http://0.0.0.0:${port}`);
   if (process.env.NODE_ENV !== 'production') {
-    console.info('Try it out: \x1b[33;1mhttp://0.0.0.0:2197/chart.png?width=750&height=600&columns=2015-05-09,2015-06-09,2015-07-09,2015-08-09,2015-09-09,2015-10-09,2015-11-09,2015-12-09,2016-01-09,2016-02-09,2016-03-09&data=438500,522500,339250,289000,384750,289625,226250,475000,348500,279900,170000|208000,215000,218000,215000,212500,216958,215000,215000,215000,218000,216312&line_colors=2ba8de,9ba1a6&legend_labels=Your+Home,Phoenix\x1b[0m');
+    console.info('Try it out: \x1b[33;1mhttp://0.0.0.0:2197/chart.png?width=750&height=600&columns=2015-05-09,2015-06-09,2015-07-09,2015-08-09,2015-09-09,2015-10-09,2015-11-09,2015-12-09,2016-01-09,2016-02-09,2016-03-09&data=208000,215000,218000,215000,212500,216958,215000,215000,215000,218000,216312|438500,522500,339250,289000,384750,289625,226250,475000,348500,279900,170000&line_colors=D0D3E0,1C85E8&legend_labels=Phoenix,Your+Home\x1b[0m');
   }
 });
 
@@ -161,10 +176,10 @@ var renderChart = (request, window, callback) => {
 
   var svg = d3.select(window.document.querySelector('svg'));
 
-  var margin = {top: 20, right: 20, bottom: 75, left: 20},
+  var margin = {top: 20, right: 20, bottom: 50, left: 20},
   chartWidth = width - margin.left - margin.right,
   chartHeight = height - margin.top - margin.bottom,
-  legendWidth = 240;
+  legendWidth = 200;
 
   var xExtent = d3.extent(columns);
 
@@ -206,7 +221,7 @@ var renderChart = (request, window, callback) => {
   var yAxis = d3.svg.axis()
     .scale(y)
     .orient('right')
-    .ticks(4)
+    .ticks(6)
     .tickFormat(yTickFormatter);
 
   chart.append('rect')
@@ -220,7 +235,7 @@ var renderChart = (request, window, callback) => {
     .attr('class', 'y axis')
     .call(yAxis)
     .selectAll('text')
-    .attr('y', -26)
+    .attr('y', -20)
     .attr('x', 10);
 
   var yGrid = yAxis
@@ -235,7 +250,7 @@ var renderChart = (request, window, callback) => {
     .scale(x)
     .orient('bottom')
     .tickFormat(d => outputFormat(d).toUpperCase())
-    .innerTickSize(20)
+    .innerTickSize(5)
     .outerTickSize(0);
 
   applyXTickStrategy(xAxis);
@@ -245,7 +260,7 @@ var renderChart = (request, window, callback) => {
     .attr('transform', `translate(0, ${chartHeight})`)
     .call(xAxis)
     .selectAll('text')
-    .attr('y', 30);
+    .attr('y', 20);
 
   d3.select(xTicks[0][xTicks.size() - 1]).attr('class', 'dark');
 
@@ -254,8 +269,20 @@ var renderChart = (request, window, callback) => {
     .enter()
     .append('path')
     .attr('class', 'line')
-    .style('stroke', (d, i) => `#${lineColors[i] || '2ba8de'}`)
+    .style('stroke', (d, i) => `#${lineColors[i] || 'D0D3E0'}`)
     .attr('d', (d) => line(_.zip(columns, d)));
+
+  chart.selectAll('g.circles')
+    .data(data)
+    .enter().append('g')
+      .attr('class', (d, i) => `circles circles-${i}`)
+      .selectAll('circle')
+        .data(d => d)
+        .enter().append('circle')
+          .attr('r', 5)
+          .style('fill', (d, i, j) => `#${lineColors[j] || '2ba8de'}`)
+          .attr('cx', (d, i) => x(columns[i]))
+          .attr('cy', d => y(d))
 
   if (legendLabels.length) {
     var legend = svg.append('g')
@@ -269,17 +296,17 @@ var renderChart = (request, window, callback) => {
       .attr('transform', (d, i) => `translate(${i * legendWidth + 50}, 0)`);
 
     legends.append('circle')
-      .attr('cx', 0)
-      .attr('cy', 0)
-      .attr('r', 10)
-      .style('fill', (d, i) => `#${lineColors[i] || '2ba8de'}`);
+      .attr('cx', 5)
+      .attr('cy', -1)
+      .attr('r', 5)
+      .style('fill', (d, i) => `#${lineColors[i] || '1C85E8'}`);
 
     legends.append('text')
       .attr('x', 20)
       .attr('dy', '.32em')
       .attr('class', 'legend')
       .text((d, i) => legendLabels[i].toUpperCase())
-      .style('fill', (d, i) => `#${lineColors[i] || '2ba8de'}`);
+      .style('fill', (d, i) => `#${lineColors[i] || '1C85E8'}`);
   }
 
   callback(null, svg);
