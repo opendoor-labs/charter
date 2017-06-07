@@ -92,6 +92,7 @@ var html = `
 var tickFormats = {
   number: value => value.toString(),
   currencyK: value => `$${value && (value/1000 + 'K')}`,
+  blank: value => ''
 };
 
 var tickStrategies = {
@@ -169,6 +170,9 @@ var renderChart = (request, window, callback) => {
   var lineColors = (request.query.line_colors || '').split(',');
   var legendLabels = (_.compact((request.query.legend_labels || '').split(',')));
   var yTickFormatter = tickFormats[request.query.format || 'currencyK'];
+  var applyGrid = request.query.grid || true
+  var bufferMethod = request.query.buffer || 'default'
+  var applyCircles = request.query.circles || true
 
   var columns = _.map(rawColumns, (column) => columnFormat.parse(column));
   var applyXTickStrategy = tickStrategies[request.query.tick_strategy || 'period'](columns);
@@ -189,7 +193,15 @@ var renderChart = (request, window, callback) => {
     .range([0, chartWidth]);
 
   var yExtent = d3.extent(_.flatten(data));
-  var buffer = yExtent[0] * 0.25;
+
+  if (bufferMethod=='default') {
+      var buffer = yExtent[0] * 0.25;
+      }
+
+  if (bufferMethod=='none') {
+      var buffer = 0;
+      }
+
 
   var y = d3.scale.linear()
     .domain([yExtent[0] - buffer, yExtent[1] + buffer])
@@ -242,9 +254,12 @@ var renderChart = (request, window, callback) => {
     .tickSize(chartWidth, 0, 0)
     .tickFormat('');
 
-  chart.append('g')
+  if (applyGrid==true) {
+    chart.append('g')
     .attr('class', 'y grid')
     .call(yGrid);
+  }
+
 
   var xAxis = d3.svg.axis()
     .scale(x)
@@ -272,17 +287,20 @@ var renderChart = (request, window, callback) => {
     .style('stroke', (d, i) => `#${lineColors[i] || 'D0D3E0'}`)
     .attr('d', (d) => line(_.zip(columns, d)));
 
-  chart.selectAll('g.circles')
+if (applyCircles==true) {
+    chart.selectAll('g.circles')
     .data(data)
     .enter().append('g')
-      .attr('class', (d, i) => `circles circles-${i}`)
-      .selectAll('circle')
-        .data(d => d)
-        .enter().append('circle')
-          .attr('r', 5)
-          .style('fill', (d, i, j) => `#${lineColors[j] || '2ba8de'}`)
-          .attr('cx', (d, i) => x(columns[i]))
-          .attr('cy', d => y(d))
+     .attr('class', (d, i) => `circles circles-${i}`)
+     .selectAll('circle')
+     .data(d => d)
+     .enter().append('circle')
+     .attr('r', 5)
+     .style('fill', (d, i, j) => `#${lineColors[j] || '2ba8de'}`)
+     .attr('cx', (d, i) => x(columns[i]))
+     .attr('cy', d => y(d))
+    }
+
 
   if (legendLabels.length) {
     var legend = svg.append('g')
