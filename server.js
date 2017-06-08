@@ -85,6 +85,57 @@ var html = `
     .outer-border {
       fill: none;
     }
+
+    .stop-left {
+    stop-color: #9ee1f7;
+    }
+
+    .stop-right {
+        stop-color: #ea7c7c;
+    }
+
+    .filled {
+        fill: url(#mainGradient);
+    }
+
+    .labels_1 {
+      fill: #1A232E;
+      font-weight: 600;
+      font-size: 20px;
+    }
+
+    .labels_2 {
+      fill: #208EEF;
+      font-weight: 600;
+      font-size: 20px;
+    }
+
+    .labels_3 {
+      fill: #F3F8FC;
+      font-weight: 600;
+      font-size: 16px;
+    }
+
+     .labels_4 {
+      fill: #989B9F;
+      font-weight: 600;
+      font-size: 16px;
+    }
+
+     .labels_5 {
+      fill: #1A232E;
+      font-weight: 800;
+      font-size: 36px;
+    }
+
+    .ruler_ticks {
+    fill: #F3F8FC;
+    }
+
+    .svg-triangle {
+     fill: #F3F8FC;
+    }
+
   </style>
 </svg>
 `;
@@ -115,8 +166,39 @@ app.get('/chart.svg', (request, response, callback) => {
   });
 });
 
+app.get('/hotness_chart.svg', (request, response, callback) => {
+  generateHotnessChart(request, (err, svg) => {
+    if (err) return callback(err);
+
+    response.send(svg.node().outerHTML);
+  });
+});
+
+
 app.get('/chart.png', (request, response, callback) => {
   generateChart(request, (err, svg) => {
+    if (err) return callback(err);
+
+    inlineCss(svg.node().outerHTML, {
+      url: 'filePath'
+    }).then((svgCssed) => {
+      var png = new Rsvg(new Buffer(svgCssed)).render({
+        format: 'png',
+        width: svg.attr('width'),
+        height: svg.attr('height')
+      });
+
+      response.set({
+        'Cache-Control': 'public, max-age=86400',
+        'Content-Type': 'image/png'
+      });
+      response.send(png.data);
+    });
+  })
+});
+
+app.get('/hotness_chart.png', (request, response, callback) => {
+  generateHotnessChart(request, (err, svg) => {
     if (err) return callback(err);
 
     inlineCss(svg.node().outerHTML, {
@@ -153,6 +235,22 @@ var generateChart = (request, callback) => {
 
       try {
         renderChart(request, window, callback);
+      } catch(err) {
+        callback(err);
+      }
+    }
+  });
+};
+
+var generateHotnessChart = (request, callback) => {
+  jsdom.env({
+    features: { QuerySelector: true },
+    html: html,
+    done: (err, window) => {
+      if (err) return callback(err);
+
+      try {
+        renderHotnessChart(request, window, callback);
       } catch(err) {
         callback(err);
       }
@@ -326,6 +424,111 @@ var renderChart = (request, window, callback) => {
         .text((d, i) => legendLabels[i].toUpperCase())
         .style('fill', (d, i) => `#${lineColors[i] || '1C85E8'}`);
   }
+
+  callback(null, svg);
+};
+
+
+var renderHotnessChart = (request, window, callback) => {
+  var rawColumns = (request.query.columns || '').split(',');
+  var rawData = _.map((request.query.data || '').split('|'), (s) => s.split(','));
+  var columnFormat = d3.time.format(request.query.column_format || '%Y-%m-%d');
+  var outputFormat = d3.time.format(request.query.output_format || '%b');
+  var width = request.query.width || 600;
+  var height = request.query.height || 220;
+  var hotness = request.query.hotness || 'Hot';
+  var hotness_score = request.query.hotness_score;
+  var score_change = request.query.score_change;
+  var change_sign = request.query.change_sign || '+';
+
+  var columns = _.map(rawColumns, (column) => columnFormat.parse(column));
+  var applyXTickStrategy = tickStrategies[request.query.tick_strategy || 'period'](columns);
+  var data = _.map(rawData, (data) => _.map(data, (d) => +d));
+
+  var svg = d3.select(window.document.querySelector('svg'));
+
+  var lineFunction = d3.svg.line()
+    .x(function(d) { return d.x; })
+    .y(function(d) { return d.y; })
+    .interpolate('linear')
+
+  svg.attr('width', width)
+    .attr('height', height);
+
+//  svg.append('rect')
+//    .attr('x', 1)
+//    .attr('y', 1)
+//    .attr('height', height - 5)
+//    .attr('width', width - 5)
+//    .attr('class', 'outer-border');
+
+  svgDefs = svg.append('defs');
+  mainGradient = svgDefs.append('linearGradient').attr('id', 'mainGradient');
+  mainGradient.append('stop').attr('class','stop-left').attr('offset','0');
+  mainGradient.append('stop').attr('class','stop-right').attr('offset','1');
+
+  svg.append('rect')
+    .classed('filled',true)
+    .attr('x', 50)
+    .attr('y', 50)
+    .attr('height', 100)
+    .attr('width', 500);
+
+  for (var i = 0; i<11; i++) {
+  var tick_mark = svg.append('rect')
+    .attr('class','ruler_ticks')
+    .attr('x', 60+48*i)
+    .attr('y', 130)
+    .attr('height', 20)
+    .attr('width', 1);
+  }
+
+
+//  svg.append("jpg:image")
+//        .attr("xlink:href", "https://imgdrop.imgix.net/0a5d1a414b7b4201b727d94d2930cc0d.jpg")
+//        .attr("x", "0")
+//        .attr("y", "0")
+//        .attr("width", "576")
+//        .attr("height", "166");
+
+//  svg.append("jpg:image")
+//        .attr("xlink:href", "https://www.gratis-malvorlagen.de/wp-content/uploads/malvorlagen/Sonstiges/2/Sprechblase-300x275.gif")
+//        .attr("x", "350")
+//        .attr("y", "60")
+//        .attr("width", "100")
+//        .attr("height", "100");
+
+ svg.append("text").text('Hotness Score').attr('class','labels_1').attr("x","50").attr("y","35");
+
+// svg.append("text").text(hotness).attr('class','labels_2').attr("x","290").attr("y","185");
+//
+// svg.append("text").text('COLD').attr('class','labels_3').attr("x","70").attr("y","75");
+//
+// svg.append("text").text('HOT').attr('class','labels_3').attr("x","500").attr("y","75");
+
+svg.append("text").text('COLD').attr('class','labels_4').attr("x","60").attr("y","172");
+
+svg.append("text").text('HOT').attr('class','labels_4').attr("x","510").attr("y","172");
+
+lineData = [ {"x": (hotness_score*4.8)+30, "y":100}, {"x":(hotness_score*4.8)+60, "y": 147},
+             {"x":(hotness_score*4.8)+90, "y":100}]
+svg.append('path')
+    .attr('class', 'svg-triangle')
+    .attr('d', lineFunction(lineData))
+
+svg.append('circle').attr('fill','white')
+    .attr('cx', (hotness_score*4.8)+60)
+    .attr('cy', 80)
+    .attr('r', 55)
+
+if (score_change>=10) {
+    var delta = 15
+    } else {
+    var delta = 23
+    }
+
+svg.append("text").text(change_sign+score_change).attr('class','labels_5').attr("x",(hotness_score*4.8)+delta).attr("y",90);
+svg.append("text").text('PTS').attr('class','labels_4').attr("x",(hotness_score*4.8)+45).attr("y",110);
 
   callback(null, svg);
 };
