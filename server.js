@@ -455,13 +455,6 @@ var renderHotnessChart = (request, window, callback) => {
   svg.attr('width', width)
     .attr('height', height);
 
-//  svg.append('rect')
-//    .attr('x', 1)
-//    .attr('y', 1)
-//    .attr('height', height - 5)
-//    .attr('width', width - 5)
-//    .attr('class', 'outer-border');
-
   svgDefs = svg.append('defs');
   mainGradient = svgDefs.append('linearGradient').attr('id', 'mainGradient');
   mainGradient.append('stop').attr('class','stop-left').attr('offset','0');
@@ -483,28 +476,7 @@ var renderHotnessChart = (request, window, callback) => {
     .attr('width', 1);
   }
 
-
-//  svg.append("jpg:image")
-//        .attr("xlink:href", "https://imgdrop.imgix.net/0a5d1a414b7b4201b727d94d2930cc0d.jpg")
-//        .attr("x", "0")
-//        .attr("y", "0")
-//        .attr("width", "576")
-//        .attr("height", "166");
-
-//  svg.append("jpg:image")
-//        .attr("xlink:href", "https://www.gratis-malvorlagen.de/wp-content/uploads/malvorlagen/Sonstiges/2/Sprechblase-300x275.gif")
-//        .attr("x", "350")
-//        .attr("y", "60")
-//        .attr("width", "100")
-//        .attr("height", "100");
-
- svg.append("text").text('Hotness Score').attr('class','labels_1').attr("x","50").attr("y","35");
-
-// svg.append("text").text(hotness).attr('class','labels_2').attr("x","290").attr("y","185");
-//
-// svg.append("text").text('COLD').attr('class','labels_3').attr("x","70").attr("y","75");
-//
-// svg.append("text").text('HOT').attr('class','labels_3').attr("x","500").attr("y","75");
+svg.append("text").text('Hotness Score').attr('class','labels_1').attr("x","50").attr("y","35");
 
 svg.append("text").text('COLD').attr('class','labels_4').attr("x","60").attr("y","172");
 
