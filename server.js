@@ -430,20 +430,9 @@ var renderChart = (request, window, callback) => {
 
 
 var renderHotnessChart = (request, window, callback) => {
-  var rawColumns = (request.query.columns || '').split(',');
-  var rawData = _.map((request.query.data || '').split('|'), (s) => s.split(','));
-  var columnFormat = d3.time.format(request.query.column_format || '%Y-%m-%d');
-  var outputFormat = d3.time.format(request.query.output_format || '%b');
-  var width = request.query.width || 600;
-  var height = request.query.height || 220;
-  var hotness = request.query.hotness || 'Hot';
   var hotness_score = request.query.hotness_score;
   var score_change = request.query.score_change;
   var change_sign = request.query.change_sign || '+';
-
-  var columns = _.map(rawColumns, (column) => columnFormat.parse(column));
-  var applyXTickStrategy = tickStrategies[request.query.tick_strategy || 'period'](columns);
-  var data = _.map(rawData, (data) => _.map(data, (d) => +d));
 
   var svg = d3.select(window.document.querySelector('svg'));
 
@@ -452,8 +441,8 @@ var renderHotnessChart = (request, window, callback) => {
     .y(function(d) { return d.y; })
     .interpolate('linear')
 
-  svg.attr('width', width)
-    .attr('height', height);
+  svg.attr('width', 600)
+    .attr('height', 220);
 
   svgDefs = svg.append('defs');
   mainGradient = svgDefs.append('linearGradient').attr('id', 'mainGradient');
