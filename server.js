@@ -86,18 +86,6 @@ var html = `
       fill: none;
     }
 
-    .stop-left {
-    stop-color: #9ee1f7;
-    }
-
-    .stop-right {
-        stop-color: #ea7c7c;
-    }
-
-    .filled {
-        fill: url(#mainGradient);
-    }
-
     .labels_1 {
       fill: #1A232E;
       font-weight: 600;
@@ -449,12 +437,30 @@ var renderHotnessChart = (request, window, callback) => {
   mainGradient.append('stop').attr('class','stop-left').attr('offset','0');
   mainGradient.append('stop').attr('class','stop-right').attr('offset','1');
 
-  svg.append('rect')
-    .classed('filled',true)
+var colors_list = ["#80DDFD","#87DAF9","#96CDE9","#A4C3DB","#B2B8CD","#C2ABBA","#C594A0","#DA8B93","#F08A8F","#FA7F83"]
+
+   svg.append('rect')
     .attr('x', 50)
     .attr('y', 50)
     .attr('height', 100)
-    .attr('width', 500);
+    .attr('width', 58)
+    .attr('fill',colors_list[0]);
+
+  for (var i = 1; i<9; i++) {
+    var rectangle = svg.append('rect')
+    .attr('x', 60+48*i)
+    .attr('y', 50)
+    .attr('height', 100)
+    .attr('width', 48)
+    .attr('fill', colors_list[i]);
+  }
+
+  svg.append('rect')
+    .attr('x', 492)
+    .attr('y', 50)
+    .attr('height', 100)
+    .attr('width', 58)
+    .attr('fill', colors_list[9]);
 
   for (var i = 0; i<11; i++) {
   var tick_mark = svg.append('rect')
