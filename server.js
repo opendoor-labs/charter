@@ -92,6 +92,7 @@ var html = `
 var tickFormats = {
   number: value => value.toString(),
   currencyK: value => `$${value && (value/1000 + 'K')}`,
+  blank: value => ''
 };
 
 var tickStrategies = {
@@ -169,6 +170,9 @@ var renderChart = (request, window, callback) => {
   var lineColors = (request.query.line_colors || '').split(',');
   var legendLabels = (_.compact((request.query.legend_labels || '').split(',')));
   var yTickFormatter = tickFormats[request.query.format || 'currencyK'];
+  var applyGrid = request.query.grid || true
+  var bufferMethod = request.query.buffer || 'default'
+  var applyCircles = request.query.circles || true
 
   var columns = _.map(rawColumns, (column) => columnFormat.parse(column));
   var applyXTickStrategy = tickStrategies[request.query.tick_strategy || 'period'](columns);
@@ -189,7 +193,15 @@ var renderChart = (request, window, callback) => {
     .range([0, chartWidth]);
 
   var yExtent = d3.extent(_.flatten(data));
-  var buffer = yExtent[0] * 0.25;
+
+  if (bufferMethod=='default') {
+      var buffer = yExtent[0] * 0.25;
+  }
+
+  if (bufferMethod=='none') {
+      var buffer = 0;
+  }
+
 
   var y = d3.scale.linear()
     .domain([yExtent[0] - buffer, yExtent[1] + buffer])
@@ -242,25 +254,28 @@ var renderChart = (request, window, callback) => {
     .tickSize(chartWidth, 0, 0)
     .tickFormat('');
 
-  chart.append('g')
-    .attr('class', 'y grid')
-    .call(yGrid);
+  if (applyGrid==true) {
+    chart.append('g')
+      .attr('class', 'y grid')
+      .call(yGrid);
+  }
+
 
   var xAxis = d3.svg.axis()
-    .scale(x)
-    .orient('bottom')
-    .tickFormat(d => outputFormat(d).toUpperCase())
-    .innerTickSize(5)
-    .outerTickSize(0);
+      .scale(x)
+      .orient('bottom')
+      .tickFormat(d => outputFormat(d).toUpperCase())
+      .innerTickSize(5)
+      .outerTickSize(0);
 
   applyXTickStrategy(xAxis);
 
   var xTicks = chart.append('g')
-    .attr('class', 'x axis')
-    .attr('transform', `translate(0, ${chartHeight})`)
-    .call(xAxis)
-    .selectAll('text')
-    .attr('y', 20);
+      .attr('class', 'x axis')
+      .attr('transform', `translate(0, ${chartHeight})`)
+      .call(xAxis)
+      .selectAll('text')
+      .attr('y', 20);
 
   d3.select(xTicks[0][xTicks.size() - 1]).attr('class', 'dark');
 
@@ -268,45 +283,48 @@ var renderChart = (request, window, callback) => {
     .data(data)
     .enter()
     .append('path')
-    .attr('class', 'line')
-    .style('stroke', (d, i) => `#${lineColors[i] || 'D0D3E0'}`)
-    .attr('d', (d) => line(_.zip(columns, d)));
+      .attr('class', 'line')
+      .style('stroke', (d, i) => `#${lineColors[i] || 'D0D3E0'}`)
+      .attr('d', (d) => line(_.zip(columns, d)));
 
-  chart.selectAll('g.circles')
+  if (applyCircles==true) {
+    chart.selectAll('g.circles')
     .data(data)
     .enter().append('g')
       .attr('class', (d, i) => `circles circles-${i}`)
-      .selectAll('circle')
-        .data(d => d)
-        .enter().append('circle')
-          .attr('r', 5)
-          .style('fill', (d, i, j) => `#${lineColors[j] || '2ba8de'}`)
-          .attr('cx', (d, i) => x(columns[i]))
-          .attr('cy', d => y(d))
+    .selectAll('circle')
+    .data(d => d)
+    .enter().append('circle')
+      .attr('r', 5)
+      .style('fill', (d, i, j) => `#${lineColors[j] || '2ba8de'}`)
+      .attr('cx', (d, i) => x(columns[i]))
+      .attr('cy', d => y(d))
+  }
+
 
   if (legendLabels.length) {
     var legend = svg.append('g')
-      .attr('class', 'legend')
-      .attr('transform', `translate(${margin.left + chartWidth - legendWidth * data.length + 25}, 55)`);
+        .attr('class', 'legend')
+        .attr('transform', `translate(${margin.left + chartWidth - legendWidth * data.length + 25}, 55)`);
 
     var legends = legend.selectAll('g')
       .data(data)
       .enter()
       .append('g')
-      .attr('transform', (d, i) => `translate(${i * legendWidth + 50}, 0)`);
+        .attr('transform', (d, i) => `translate(${i * legendWidth + 50}, 0)`);
 
     legends.append('circle')
-      .attr('cx', 5)
-      .attr('cy', -1)
-      .attr('r', 5)
-      .style('fill', (d, i) => `#${lineColors[i] || '1C85E8'}`);
+        .attr('cx', 5)
+        .attr('cy', -1)
+        .attr('r', 5)
+        .style('fill', (d, i) => `#${lineColors[i] || '1C85E8'}`);
 
     legends.append('text')
-      .attr('x', 20)
-      .attr('dy', '.32em')
-      .attr('class', 'legend')
-      .text((d, i) => legendLabels[i].toUpperCase())
-      .style('fill', (d, i) => `#${lineColors[i] || '1C85E8'}`);
+        .attr('x', 20)
+        .attr('dy', '.32em')
+        .attr('class', 'legend')
+        .text((d, i) => legendLabels[i].toUpperCase())
+        .style('fill', (d, i) => `#${lineColors[i] || '1C85E8'}`);
   }
 
   callback(null, svg);
