@@ -422,13 +422,20 @@ var renderHotnessChart = (request, window, callback) => {
   var delta = +request.query.delta;
 
   var margin = { top: 50, right: 50, bottom: 70, left: 50 };
-  var width = 600 - margin.left - margin.right,
+  var width = 700 - margin.left - margin.right,
       height = 220 - margin.top - margin.bottom;
   var svg = d3.select(window.document.querySelector('svg'));
 
   svg
       .attr('width', width + margin.left + margin.right)
       .attr('height', height + margin.top + margin.bottom);
+
+  svg.append('rect')
+      .attr('x', 0)
+      .attr('y', 0)
+      .attr('height', 110)
+      .attr('width', 700)
+      .attr('fill', '#e8f2fc')
 
   var chart = svg.append('g')
       .attr('transform', `translate(${margin.left}, ${margin.top})`)
@@ -477,7 +484,7 @@ var renderHotnessChart = (request, window, callback) => {
       .attr('y', height + 20);
 
   chart.append('polygon')
-      .attr('points', `${x(score - 10)},30 ${x(score)},100 ${x(score + 10)},30`)
+      .attr('points', `${x(score - 5)},50 ${x(score)},100 ${x(score + 5)},50`)
       .attr('fill', 'white')
   chart.append('circle')
       .attr('fill', 'white')
