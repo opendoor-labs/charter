@@ -7,7 +7,125 @@ var moment = require('moment');
 var Rsvg = require('librsvg').Rsvg;
 
 var port = process.env.PORT || 2197;
-var html = `
+
+var tickFormats = {
+  number: value => value.toString(),
+  currencyK: value => `$${value && (value/1000 + 'K')}`,
+  blank: value => ''
+};
+
+var tickStrategies = {
+  period: (columns) => (axis) => {
+    var columnindicies = _.filter(_.range(columns.length), (i) => i % 2 === 0);
+    axis.tickValues(_.map(columnindicies, (i) => columns[i]));
+  },
+  constant: () => (axis) => {
+    axis.ticks(5);
+  }
+};
+
+var app = express();
+
+app.get('/chart.svg', (request, response, callback) => {
+  generateChart(request, (err, svg) => {
+    if (err) return callback(err);
+
+    response.send(svg.node().outerHTML);
+  });
+});
+
+app.get('/chart.png', (request, response, callback) => {
+  generateChart(request, (err, svg) => {
+    if (err) return callback(err);
+
+    inlineCss(svg.node().outerHTML, {
+      url: 'filePath'
+    }).then((svgCssed) => {
+      var png = new Rsvg(new Buffer(svgCssed)).render({
+        format: 'png',
+        width: svg.attr('width'),
+        height: svg.attr('height')
+      });
+
+      response.set({
+        'Cache-Control': 'public, max-age=86400',
+        'Content-Type': 'image/png'
+      });
+      response.send(png.data);
+    });
+  })
+});
+
+app.get('/hotness_chart.svg', (request, response, callback) => {
+  generateHotnessChart(request, (err, svg) => {
+    if (err) return callback(err);
+
+    response.send(svg.node().outerHTML);
+  });
+});
+
+app.get('/hotness_chart.png', (request, response, callback) => {
+  generateHotnessChart(request, (err, svg) => {
+    if (err) return callback(err);
+
+    inlineCss(svg.node().outerHTML, {
+      url: 'filePath'
+    }).then((svgCssed) => {
+      var png = new Rsvg(new Buffer(svgCssed)).render({
+        format: 'png',
+        width: svg.attr('width'),
+        height: svg.attr('height')
+      });
+
+      response.set({
+        'Cache-Control': 'public, max-age=86400',
+        'Content-Type': 'image/png'
+      });
+      response.send(png.data);
+    });
+  })
+});
+
+app.listen(port, () => {
+  console.log(`Listening on http://0.0.0.0:${port}`);
+  if (process.env.NODE_ENV !== 'production') {
+    console.info('Try it out: \x1b[33;1mhttp://0.0.0.0:2197/chart.png?width=750&height=600&columns=2015-05-09,2015-06-09,2015-07-09,2015-08-09,2015-09-09,2015-10-09,2015-11-09,2015-12-09,2016-01-09,2016-02-09,2016-03-09&data=208000,215000,218000,215000,212500,216958,215000,215000,215000,218000,216312|438500,522500,339250,289000,384750,289625,226250,475000,348500,279900,170000&line_colors=D0D3E0,1C85E8&legend_labels=Phoenix,Your+Home\x1b[0m');
+  }
+});
+
+var generateChart = (request, callback) => {
+  jsdom.env({
+    features: { QuerySelector: true },
+    html: chartHtml,
+    done: (err, window) => {
+      if (err) return callback(err);
+
+      try {
+        renderChart(request, window, callback);
+      } catch(err) {
+        callback(err);
+      }
+    }
+  });
+};
+
+var generateHotnessChart = (request, callback) => {
+  jsdom.env({
+    features: { QuerySelector: true },
+    html: hotnessHtml,
+    done: (err, window) => {
+      if (err) return callback(err);
+
+      try {
+        renderHotnessChart(request, window, callback);
+      } catch(err) {
+        callback(err);
+      }
+    }
+  });
+};
+
+var chartHtml = `
 <svg>
   <style>
     * {
@@ -88,77 +206,6 @@ var html = `
   </style>
 </svg>
 `;
-
-var tickFormats = {
-  number: value => value.toString(),
-  currencyK: value => `$${value && (value/1000 + 'K')}`,
-  blank: value => ''
-};
-
-var tickStrategies = {
-  period: (columns) => (axis) => {
-    var columnindicies = _.filter(_.range(columns.length), (i) => i % 2 === 0);
-    axis.tickValues(_.map(columnindicies, (i) => columns[i]));
-  },
-  constant: () => (axis) => {
-    axis.ticks(5);
-  }
-};
-
-var app = express();
-
-app.get('/chart.svg', (request, response, callback) => {
-  generateChart(request, (err, svg) => {
-    if (err) return callback(err);
-
-    response.send(svg.node().outerHTML);
-  });
-});
-
-app.get('/chart.png', (request, response, callback) => {
-  generateChart(request, (err, svg) => {
-    if (err) return callback(err);
-
-    inlineCss(svg.node().outerHTML, {
-      url: 'filePath'
-    }).then((svgCssed) => {
-      var png = new Rsvg(new Buffer(svgCssed)).render({
-        format: 'png',
-        width: svg.attr('width'),
-        height: svg.attr('height')
-      });
-
-      response.set({
-        'Cache-Control': 'public, max-age=86400',
-        'Content-Type': 'image/png'
-      });
-      response.send(png.data);
-    });
-  })
-});
-
-app.listen(port, () => {
-  console.log(`Listening on http://0.0.0.0:${port}`);
-  if (process.env.NODE_ENV !== 'production') {
-    console.info('Try it out: \x1b[33;1mhttp://0.0.0.0:2197/chart.png?width=750&height=600&columns=2015-05-09,2015-06-09,2015-07-09,2015-08-09,2015-09-09,2015-10-09,2015-11-09,2015-12-09,2016-01-09,2016-02-09,2016-03-09&data=208000,215000,218000,215000,212500,216958,215000,215000,215000,218000,216312|438500,522500,339250,289000,384750,289625,226250,475000,348500,279900,170000&line_colors=D0D3E0,1C85E8&legend_labels=Phoenix,Your+Home\x1b[0m');
-  }
-});
-
-var generateChart = (request, callback) => {
-  jsdom.env({
-    features: { QuerySelector: true },
-    html: html,
-    done: (err, window) => {
-      if (err) return callback(err);
-
-      try {
-        renderChart(request, window, callback);
-      } catch(err) {
-        callback(err);
-      }
-    }
-  });
-};
 
 var renderChart = (request, window, callback) => {
   var rawColumns = (request.query.columns || '').split(',');
@@ -326,6 +373,130 @@ var renderChart = (request, window, callback) => {
         .text((d, i) => legendLabels[i].toUpperCase())
         .style('fill', (d, i) => `#${lineColors[i] || '1C85E8'}`);
   }
+
+  callback(null, svg);
+};
+
+var hotnessHtml = `
+<svg>
+  <style>
+    * {
+      font-weight: 400;
+      font-size: 26px;
+      font-family: 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;
+    }
+
+    .axis path,
+    .axis line {
+      fill: none;
+      stroke: #f0f0f0;
+      shape-rendering: crispEdges;
+    }
+    .axis path {
+      stroke: none;
+    }
+
+    .header {
+      fill: #1A232E;
+      font-weight: 600;
+      font-size: 20px;
+    }
+
+    .tick-labels {
+      fill: #989B9F;
+      font-weight: 600;
+      font-size: 16px;
+    }
+
+    .delta {
+      fill: #1A232E;
+      font-weight: 800;
+      font-size: 36px;
+    }
+  </style>
+</svg>
+`;
+
+var renderHotnessChart = (request, window, callback) => {
+  var score = +request.query.score;
+  var delta = +request.query.delta;
+
+  var margin = { top: 50, right: 50, bottom: 70, left: 50 };
+  var width = 600 - margin.left - margin.right,
+      height = 220 - margin.top - margin.bottom;
+  var svg = d3.select(window.document.querySelector('svg'));
+
+  svg
+      .attr('width', width + margin.left + margin.right)
+      .attr('height', height + margin.top + margin.bottom);
+
+  var chart = svg.append('g')
+      .attr('transform', `translate(${margin.left}, ${margin.top})`)
+
+  var x = d3.scale.linear()
+      .domain([0, 100])
+      .range([0, width]);
+  var colors = d3.scale.linear()
+      .domain(x.domain())
+      .range(['#80DDFD', '#FA7F83']);
+
+  chart.selectAll('rect')
+      .data(_.range(-2, colors.domain()[1]+2))
+    .enter().append('rect')
+      .attr('x', x)
+      .attr('y', 0)
+      .attr('height', height)
+      .attr('width', width/colors.domain()[1])
+      .attr('fill', colors);
+
+  var xAxis = d3.svg.axis()
+      .orient('top')
+      .scale(x)
+      .tickSize(20)
+      .tickFormat('');
+  chart.append('g')
+      .attr('class', 'axis')
+      .attr('transform', `translate(0, ${height})`)
+      .call(xAxis);
+
+  chart.append('text')
+      .text('Hotness Score')
+      .attr('class', 'header')
+      .attr('x', 0)
+      .attr('y', -10);
+  chart.append("text")
+      .text('COLD')
+      .attr('class', 'tick-labels')
+      .attr('x', 0)
+      .attr('y', height + 20);
+  chart.append("text")
+      .text('HOT')
+      .attr('class', 'tick-labels')
+      .attr('text-anchor', 'end')
+      .attr('x', width)
+      .attr('y', height + 20);
+
+  chart.append('polygon')
+      .attr('points', `${x(score - 10)},30 ${x(score)},100 ${x(score + 10)},30`)
+      .attr('fill', 'white')
+  chart.append('circle')
+      .attr('fill', 'white')
+      .attr('cx', x(score))
+      .attr('cy', 30)
+      .attr('r', 55)
+
+  chart.append('text')
+      .text(d3.format('+.1f')(delta))
+      .attr('class', 'delta')
+      .attr('text-anchor', 'middle')
+      .attr('x', x(score))
+      .attr('y', 40);
+  chart.append('text')
+      .text('PTS')
+      .attr('class','tick-labels')
+      .attr('text-anchor', 'middle')
+      .attr('x', x(score))
+      .attr('y', 60);
 
   callback(null, svg);
 };
