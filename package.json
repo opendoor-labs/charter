@@ -9,7 +9,7 @@
     "express": "4.13.4",
     "inline-css": "2.2.1",
     "jsdom": "8.1.0",
-    "librsvg": "0.6.1",
+    "librsvg": "0.7.0",
     "lodash": "4.6.1",
     "moment": "2.12.0"
   },
@@ -17,8 +17,8 @@
     "nodemon": "1.9.1"
   },
   "engines": {
-    "node": "5.7.0",
-    "npm": "3.6.0"
+    "node": "6.11.1",
+    "npm": "3.10.10"
   },
   "description": "Charter: A service that generates PNG from d3 charts. Useful for embedding static d3 charts in emails.",
   "main": "server.js",
