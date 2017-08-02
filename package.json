@@ -18,7 +18,7 @@
   },
   "engines": {
     "node": "6.11.1",
-    "npm": "3.10.10"
+    "npm": "5.3.0"
   },
   "description": "Charter: A service that generates PNG from d3 charts. Useful for embedding static d3 charts in emails.",
   "main": "server.js",
