@@ -216,10 +216,33 @@ var renderChart = (request, window, callback) => {
   var height = request.query.height || 600;
   var lineColors = (request.query.line_colors || '').split(',');
   var legendLabels = (_.compact((request.query.legend_labels || '').split(',')));
-  var yTickFormatter = tickFormats[request.query.format || 'currencyK'];
+  var yLabelFormat = request.query.format || 'currencyK'
+  var yTickFormatter = tickFormats[yLabelFormat];
   var applyGrid = request.query.grid || true
   var bufferMethod = request.query.buffer || 'default'
   var applyCircles = request.query.circles || true
+  var yAxisOrient = request.query.y_axis_orient || 'right'
+
+  // Choose which formating we want to use when printing our x axis labels
+  var xAxisFormat;
+  if (request.query.x_axis_format == 'year_first_last') {
+    xAxisFormat = (d,i) => {
+      // only print first and last x axis label
+      // and print the year of the value
+      // *NOTE: the 'period' tickStrategies option specifies that
+      // only half of the values will be printed on the x axis
+      return i == 0 || i == Math.floor(rawColumns.length / 2) ? moment(d).year() : '';
+    }
+  } else {
+    xAxisFormat = d => outputFormat(d).toUpperCase();
+  }
+  // Adjust how far to the left we want to print our y axis labels
+  var yAxisLabelOffsetX = yAxisOrient == 'left' ? (yLabelFormat ==  'currencyK' ? -50 : -30) : 10;
+  // Adjust our vertical offset for where we print our y axis labels
+  var yAxisLabelOffsetY = yAxisOrient == 'left' ? 0 : -20;
+  // When printing currencyK values on the y axis we need more
+  // margin to the left if we have left oriented the y axis labels
+  var marginLeft = yAxisOrient == 'left' && yLabelFormat ==  'currencyK' ? 50 : 30
 
   var columns = _.map(rawColumns, (column) => columnFormat.parse(column));
   var applyXTickStrategy = tickStrategies[request.query.tick_strategy || 'period'](columns);
@@ -227,7 +250,7 @@ var renderChart = (request, window, callback) => {
 
   var svg = d3.select(window.document.querySelector('svg'));
 
-  var margin = {top: 20, right: 20, bottom: 50, left: 20},
+  var margin = {top: 20, right: 20, bottom: 50, left: marginLeft},
   chartWidth = width - margin.left - margin.right,
   chartHeight = height - margin.top - margin.bottom,
   legendWidth = 200;
@@ -248,7 +271,6 @@ var renderChart = (request, window, callback) => {
   if (bufferMethod=='none') {
       var buffer = 0;
   }
-
 
   var y = d3.scale.linear()
     .domain([yExtent[0] - buffer, yExtent[1] + buffer])
@@ -294,8 +316,8 @@ var renderChart = (request, window, callback) => {
     .attr('class', 'y axis')
     .call(yAxis)
     .selectAll('text')
-    .attr('y', -20)
-    .attr('x', 10);
+    .attr('y', yAxisLabelOffsetY)
+    .attr('x', yAxisLabelOffsetX);
 
   var yGrid = yAxis
     .tickSize(chartWidth, 0, 0)
@@ -307,11 +329,10 @@ var renderChart = (request, window, callback) => {
       .call(yGrid);
   }
 
-
   var xAxis = d3.svg.axis()
       .scale(x)
       .orient('bottom')
-      .tickFormat(d => outputFormat(d).toUpperCase())
+      .tickFormat(xAxisFormat)
       .innerTickSize(5)
       .outerTickSize(0);
 
@@ -322,9 +343,13 @@ var renderChart = (request, window, callback) => {
       .attr('transform', `translate(0, ${chartHeight})`)
       .call(xAxis)
       .selectAll('text')
-      .attr('y', 20);
+      .attr('y', 10);
 
-  d3.select(xTicks[0][xTicks.size() - 1]).attr('class', 'dark');
+  // We don't want to bolden the last x axis label when
+  // we are only displaying the first and last year
+  if(request.query.x_axis_format != 'year_first_last'){
+    d3.select(xTicks[0][xTicks.size() - 1]).attr('class', 'dark');
+  }
 
   chart.selectAll('path.line')
     .data(data)
