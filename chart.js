@@ -6,7 +6,8 @@ var moment = require('moment');
 var tickFormats = {
   number: value => value.toString(),
   currencyK: value => `$${value && (value/1000 + 'K')}`,
-  blank: value => ''
+  blank: value => '',
+  percentage: value => `${Math.round(value * 1000)/10}%`
 };
 
 var tickStrategies = {
@@ -146,13 +147,28 @@ var renderChart = (request, window, callback) => {
   } else {
     xAxisFormat = d => outputFormat(d).toUpperCase();
   }
-  // Adjust how far to the left we want to print our y axis labels
-  var yAxisLabelOffsetX = yAxisOrient == 'left' ? (yLabelFormat ==  'currencyK' ? -50 : -30) : 10;
-  // Adjust our vertical offset for where we print our y axis labels
-  var yAxisLabelOffsetY = yAxisOrient == 'left' ? 0 : -20;
-  // When printing currencyK values on the y axis we need more
-  // margin to the left if we have left oriented the y axis labels
-  var marginLeft = yAxisOrient == 'left' && yLabelFormat ==  'currencyK' ? 50 : 30
+
+  // Position Y AXIS Labels
+  // Adjust vertical & horizontal offset of where y axis labels are printed
+  var yAxisLabelOffsetY = -20;
+  var yAxisLabelOffsetX = 10;
+  var marginLeft = 30;
+  var textAnchor = 'start';
+  // Override these defaults for the following cases
+  if (yAxisOrient == 'left') {
+    textAnchor = 'end';
+    yAxisLabelOffsetX = -5;
+    switch(yLabelFormat){
+      case 'currencyK':
+        yAxisLabelOffsetY = -10;
+        marginLeft = 50;
+        break;
+      case 'percentage':
+        yAxisLabelOffsetY = 0;
+        marginLeft = 50;
+        break;
+    }
+  }
 
   var columns = _.map(rawColumns, (column) => columnFormat.parse(column));
   var applyXTickStrategy = tickStrategies[request.query.tick_strategy || 'period'](columns);
@@ -227,7 +243,8 @@ var renderChart = (request, window, callback) => {
     .call(yAxis)
     .selectAll('text')
     .attr('y', yAxisLabelOffsetY)
-    .attr('x', yAxisLabelOffsetX);
+    .attr('x', yAxisLabelOffsetX)
+    .style('text-anchor', textAnchor);
 
   var yGrid = yAxis
     .tickSize(chartWidth, 0, 0)
