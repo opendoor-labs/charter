@@ -7,7 +7,7 @@
   "dependencies": {
     "d3": "3.5.16",
     "express": "4.13.4",
-    "inline-css": "2.2.1",
+    "inline-css": "2.2.4",
     "jsdom": "8.1.0",
     "librsvg": "0.7.0",
     "lodash": "4.6.1",
